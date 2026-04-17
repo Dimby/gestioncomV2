@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GestionComV2 | Chat avec IA</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body data-page="assistant" data-role="admin">
+    <div class="app-shell">
+      <aside class="sidebar">
+        <nav class="nav-links">
+          <a class="nav-link" href="/index.html">Tableau de bord</a>
+          <a class="nav-link" href="/produits.html">Produits</a>
+          <a class="nav-link" href="/approvisionnement.html">Approvisionnement</a>
+          <a class="nav-link" href="/services.html">Services</a>
+          <a class="nav-link" href="/ventes.html">Ventes</a>
+          <a class="nav-link" href="/activite.html">Activite</a>
+          <a class="nav-link is-active" href="/chat-ia.html">Chat avec IA</a>
+          <button class="nav-link nav-button" type="button" data-action="admin-logout">
+            Deconnexion admin
+          </button>
+        </nav>
+        <div class="brand-block">
+          <p class="eyebrow">Multiservice</p>
+          <h1>GestionComV2</h1>
+          <p class="brand-copy">Stock, prestations et caisse locale.</p>
+        </div>
+      </aside>
+
+      <div class="content-shell">
+        <header class="page-header compact">
+          <div>
+            <p class="eyebrow">Assistant metier</p>
+            <h2>Chat avec IA</h2>
+            <p class="page-copy">
+              Pose une question sur les ventes, la marge ou la valeur du stock.
+            </p>
+          </div>
+          <div class="hero-card">
+            <p>Etat de la base</p>
+            <strong id="db-status">Chargement...</strong>
+            <small id="db-meta">Initialisation.</small>
+          </div>
+        </header>
+
+        <main class="page-grid assistant-grid">
+          <section class="panel">
+            <div class="panel-head">
+              <h3>Poser une question</h3>
+            </div>
+            <form id="assistant-form" class="form-grid">
+              <label>
+                Question
+                <textarea
+                  id="assistant-question"
+                  name="question"
+                  rows="5"
+                  placeholder="Exemple : Est-ce que tu peux me donner la marge mensuelle du mois de fevrier 2026 ?"
+                  required
+                ></textarea>
+              </label>
+              <button type="submit">Envoyer</button>
+            </form>
+
+            <div class="suggestions">
+              <button class="suggestion-chip" data-question="Donne-moi la marge mensuelle du mois de fevrier 2026.">
+                Marge de fevrier 2026
+              </button>
+              <button class="suggestion-chip" data-question="Genere le total du prix de vente des produits en stock.">
+                Valeur de vente du stock
+              </button>
+              <button class="suggestion-chip" data-question="Quel est le produit le plus vendu en janvier 2026 ?">
+                Produit le plus vendu en janvier 2026
+              </button>
+            </div>
+          </section>
+
+          <section class="panel list-panel">
+            <div class="panel-head">
+              <h3>Conversation</h3>
+            </div>
+            <div id="assistant-messages" class="assistant-thread"></div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <template id="assistant-message-template">
+      <article class="assistant-message">
+        <span class="assistant-role"></span>
+        <p class="assistant-body"></p>
+      </article>
+    </template>
+
+    <script src="/app.js"></script>
+  </body>
+  </html>

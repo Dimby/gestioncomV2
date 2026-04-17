@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GestionComV2 | Produits</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body data-page="products" data-role="admin">
+    <div class="app-shell">
+      <aside class="sidebar">
+        <nav class="nav-links">
+          <a class="nav-link" href="/index.html">Tableau de bord</a>
+          <a class="nav-link is-active" href="/produits.html">Produits</a>
+          <a class="nav-link" href="/approvisionnement.html">Approvisionnement</a>
+          <a class="nav-link" href="/services.html">Services</a>
+          <a class="nav-link" href="/ventes.html">Ventes</a>
+          <a class="nav-link" href="/activite.html">Activite</a>
+          <a class="nav-link" href="/chat-ia.html">Chat avec IA</a>
+          <button class="nav-link nav-button" type="button" data-action="admin-logout">
+            Deconnexion admin
+          </button>
+        </nav>
+        <div class="brand-block">
+          <p class="eyebrow">Multiservice</p>
+          <h1>GestionComV2</h1>
+          <p class="brand-copy">Stock, prestations et caisse locale.</p>
+        </div>
+      </aside>
+
+      <div class="content-shell">
+        <header class="page-header compact">
+          <div>
+            <p class="eyebrow">Catalogue</p>
+            <h2>Produits</h2>
+            <p class="page-copy">
+              Creation et suivi des articles vendus par la boutique.
+            </p>
+          </div>
+          <div class="hero-card">
+            <p>Etat de la base</p>
+            <strong id="db-status">Chargement...</strong>
+            <small id="db-meta">Initialisation.</small>
+          </div>
+        </header>
+
+        <main class="page-grid two-columns">
+          <section class="panel">
+            <div class="panel-head">
+              <h3>Nouveau produit</h3>
+              <span id="products-count">0 produit</span>
+            </div>
+            <form id="product-form" class="form-grid">
+              <label>
+                Nom
+                <input type="text" name="name" placeholder="Cahier 200 pages" required />
+              </label>
+              <label>
+                Categorie
+                <input type="text" name="category" placeholder="Fournitures scolaires" required />
+              </label>
+              <label>
+                Unite
+                <input type="text" name="unit" placeholder="piece" value="piece" />
+              </label>
+              <label>
+                Prix de vente
+                <input type="number" name="salePrice" min="0" step="0.01" value="0" />
+              </label>
+              <label>
+                Cout unitaire
+                <input type="number" name="costPrice" min="0" step="0.01" value="0" />
+              </label>
+              <label>
+                Cout total achat
+                <input type="number" name="purchaseTotalPrice" min="0" step="0.01" value="0" />
+              </label>
+              <label>
+                Seuil mini
+                <input type="number" name="reorderLevel" min="0" step="1" value="5" />
+              </label>
+              <button type="submit">Ajouter le produit</button>
+            </form>
+          </section>
+
+          <section class="panel list-panel">
+            <div class="panel-head">
+              <div>
+                <h3>Liste des produits</h3>
+              </div>
+            </div>
+            <div id="products-list" class="list"></div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <template id="list-item-template">
+      <article class="list-item">
+        <div>
+          <h3></h3>
+          <p></p>
+        </div>
+        <strong></strong>
+      </article>
+    </template>
+
+    <script src="/app.js"></script>
+  </body>
+  </html>

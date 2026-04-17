@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GestionComV2 | Approvisionnement</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body data-page="stock" data-role="admin">
+    <div class="app-shell">
+      <aside class="sidebar">
+        <nav class="nav-links">
+          <a class="nav-link" href="/index.html">Tableau de bord</a>
+          <a class="nav-link" href="/produits.html">Produits</a>
+          <a class="nav-link is-active" href="/approvisionnement.html">Approvisionnement</a>
+          <a class="nav-link" href="/services.html">Services</a>
+          <a class="nav-link" href="/ventes.html">Ventes</a>
+          <a class="nav-link" href="/activite.html">Activite</a>
+          <a class="nav-link" href="/chat-ia.html">Chat avec IA</a>
+          <button class="nav-link nav-button" type="button" data-action="admin-logout">
+            Deconnexion admin
+          </button>
+        </nav>
+        <div class="brand-block">
+          <p class="eyebrow">Multiservice</p>
+          <h1>GestionComV2</h1>
+          <p class="brand-copy">Stock, prestations et caisse locale.</p>
+        </div>
+      </aside>
+
+      <div class="content-shell">
+        <header class="page-header compact">
+          <div>
+            <p class="eyebrow">Flux stock</p>
+            <h2>Approvisionnement</h2>
+            <p class="page-copy">
+              Saisie des entrees en stock et consultation des derniers mouvements.
+            </p>
+          </div>
+          <div class="hero-card">
+            <p>Etat de la base</p>
+            <strong id="db-status">Chargement...</strong>
+            <small id="db-meta">Initialisation.</small>
+          </div>
+        </header>
+
+        <main class="page-grid two-columns">
+          <section class="panel">
+            <div class="panel-head">
+              <h3>Nouvel approvisionnement</h3>
+            </div>
+            <form id="stock-form" class="form-grid">
+              <label>
+                Produit
+                <select id="stock-product-id" name="productId" required></select>
+              </label>
+              <label>
+                Quantite recue
+                <input type="number" name="quantity" min="1" step="1" value="1" />
+              </label>
+              <label>
+                Cout unitaire
+                <input type="number" name="unitCost" min="0" step="0.01" value="0" />
+              </label>
+              <label>
+                Fournisseur / note
+                <input type="text" name="note" placeholder="Achat grossiste" />
+              </label>
+              <button type="submit">Enregistrer l'entree</button>
+            </form>
+          </section>
+
+          <section class="panel list-panel">
+            <div class="panel-head">
+              <h3>Derniers mouvements</h3>
+            </div>
+            <div id="stock-movements-list" class="list"></div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <template id="list-item-template">
+      <article class="list-item">
+        <div>
+          <h3></h3>
+          <p></p>
+        </div>
+        <strong></strong>
+      </article>
+    </template>
+
+    <script src="/app.js"></script>
+  </body>
+  </html>

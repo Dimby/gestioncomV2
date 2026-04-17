@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GestionComV2 | Tableau de bord</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body data-page="dashboard" data-role="admin">
+    <div class="app-shell">
+      <aside class="sidebar">
+        <nav class="nav-links">
+          <a class="nav-link is-active" href="/index.html">Tableau de bord</a>
+          <a class="nav-link" href="/produits.html">Produits</a>
+          <a class="nav-link" href="/approvisionnement.html">Approvisionnement</a>
+          <a class="nav-link" href="/services.html">Services</a>
+          <a class="nav-link" href="/ventes.html">Ventes</a>
+          <a class="nav-link" href="/activite.html">Activite</a>
+          <a class="nav-link" href="/chat-ia.html">Chat avec IA</a>
+          <button class="nav-link nav-button" type="button" data-action="admin-logout">
+            Deconnexion admin
+          </button>
+        </nav>
+        <div class="brand-block">
+          <p class="eyebrow">Multiservice</p>
+          <h1>GestionComV2</h1>
+          <p class="brand-copy">Stock, prestations et caisse locale.</p>
+        </div>
+      </aside>
+
+      <div class="content-shell">
+        <header class="page-header">
+          <div>
+            <p class="eyebrow">Vue generale</p>
+            <h2>Tableau de bord</h2>
+            <p class="page-copy">
+              Vue rapide sur l'etat du stock, des services, de la caisse et des
+              derniers mouvements.
+            </p>
+          </div>
+          <div class="hero-card">
+            <p>Etat de la base</p>
+            <strong id="db-status">Chargement...</strong>
+            <small id="db-meta">Initialisation.</small>
+          </div>
+        </header>
+
+        <section class="stats-grid" id="stats-grid"></section>
+
+        <main class="dashboard-grid">
+          <section class="panel list-panel">
+            <div class="panel-head">
+              <h3>Produits sous seuil</h3>
+            </div>
+            <div id="low-stock-list" class="list"></div>
+          </section>
+
+          <section class="panel list-panel">
+            <div class="panel-head">
+              <h3>Dernieres ventes</h3>
+            </div>
+            <div id="sales-list" class="list"></div>
+          </section>
+
+          <section class="panel list-panel">
+            <div class="panel-head">
+              <h3>Journal recent</h3>
+            </div>
+            <div id="activity-list" class="list"></div>
+          </section>
+
+          <section class="panel list-panel">
+            <div class="panel-head">
+              <h3>Derniers mouvements de stock</h3>
+            </div>
+            <div id="stock-movements-list" class="list"></div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <template id="list-item-template">
+      <article class="list-item">
+        <div>
+          <h3></h3>
+          <p></p>
+        </div>
+        <strong></strong>
+      </article>
+    </template>
+
+    <template id="stat-card-template">
+      <article class="stat-card">
+        <span></span>
+        <strong></strong>
+        <small></small>
+      </article>
+    </template>
+
+    <script src="/app.js"></script>
+  </body>
+  </html>

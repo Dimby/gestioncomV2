@@ -1,0 +1,17 @@
+{
+  "name": "gestion-com-v2",
+  "version": "1.0.0",
+  "description": "Application locale de gestion de stock et services pour multiservice.",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "keywords": [
+    "stock",
+    "multiservice",
+    "nodejs",
+    "local"
+  ],
+  "license": "UNLICENSED"
+}

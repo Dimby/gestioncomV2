@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GestionComV2 | Ventes</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body data-page="sales" data-role="public">
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand-block">
+          <p class="eyebrow">Espace vendeur</p>
+          <h1>GestionComV2</h1>
+          <p class="brand-copy">Saisie libre des ventes et consultation du journal de caisse.</p>
+        </div>
+        <nav class="nav-links">
+          <a class="nav-link is-active" href="/ventes.html">Ventes</a>
+          <a class="nav-link" href="/admin-login.html" data-auth-role="seller">Connexion admin</a>
+          <a class="nav-link" href="/index.html" data-auth-role="admin" hidden>Tableau de bord admin</a>
+          <button class="nav-link nav-button" type="button" data-action="admin-logout" data-auth-role="admin" hidden>
+            Deconnexion admin
+          </button>
+        </nav>
+      </aside>
+
+      <div class="content-shell">
+        <header class="page-header compact">
+          <div>
+            <p class="eyebrow">Caisse publique</p>
+            <h2>Ventes vendeur</h2>
+            <p class="page-copy">
+              Le vendeur peut ajouter, modifier, supprimer et consulter les ventes sans mot de passe,
+              ainsi que rattacher les depenses journalieres.
+            </p>
+          </div>
+          <div class="hero-card">
+            <p>Etat de l'espace</p>
+            <strong id="db-status">Chargement...</strong>
+            <small id="db-meta">Initialisation.</small>
+          </div>
+        </header>
+
+        <main class="page-grid two-columns">
+          <section class="panel" id="seller-entry-panel">
+            <div class="panel-head">
+              <div>
+                <h3 id="sale-form-title">Nouvelle vente produit</h3>
+                <span id="entry-panel-copy">Choisis le bon type d'operation avant de saisir.</span>
+              </div>
+            </div>
+
+            <div class="entry-tabs" id="entry-mode-tabs" role="tablist" aria-label="Saisie vendeur">
+              <button
+                type="button"
+                class="filter-chip is-active"
+                data-entry-mode="product"
+                role="tab"
+                aria-selected="true"
+              >
+                Vente produit
+              </button>
+              <button
+                type="button"
+                class="filter-chip"
+                data-entry-mode="service"
+                role="tab"
+                aria-selected="false"
+              >
+                Vente service
+              </button>
+              <button
+                type="button"
+                class="filter-chip"
+                data-entry-mode="expense"
+                role="tab"
+                aria-selected="false"
+              >
+                Depense
+              </button>
+            </div>
+
+            <div class="entry-content">
+              <section
+                class="entry-pane is-active"
+                id="sale-pane"
+                data-entry-pane="sale"
+                role="tabpanel"
+              >
+                <form id="sale-form" class="form-grid">
+                  <label>
+                    Client
+                    <input type="text" name="customerName" placeholder="Client comptoir" />
+                  </label>
+                  <label>
+                    <span id="sale-ref-label">Produit</span>
+                    <select id="sale-ref-id" name="refId" required></select>
+                  </label>
+                  <label>
+                    Quantite
+                    <input type="number" name="quantity" min="1" step="1" value="1" />
+                  </label>
+                  <label>
+                    Montant encaisse
+                    <input type="number" name="amountPaid" min="0" step="0.01" value="0" />
+                  </label>
+                  <label>
+                    Paiement
+                    <select name="paymentMethod" id="payment-method"></select>
+                  </label>
+                  <p id="sale-editing-hint" class="inline-note">
+                    Le vendeur peut saisir librement une vente produit sans mot de passe.
+                  </p>
+                  <div class="form-actions">
+                    <button type="submit" id="sale-submit-label">Valider la vente</button>
+                    <button type="button" id="sale-cancel-edit" class="secondary-button" hidden>
+                      Annuler la modification
+                    </button>
+                  </div>
+                </form>
+              </section>
+
+              <section
+                class="entry-pane"
+                id="expense-pane"
+                data-entry-pane="expense"
+                role="tabpanel"
+                hidden
+              >
+                <form id="expense-form" class="form-grid">
+                  <label>
+                    Libelle de la depense
+                    <input type="text" name="label" placeholder="Transport, courant, achat urgent..." />
+                  </label>
+                  <label>
+                    Montant
+                    <input type="number" name="amount" min="0" step="0.01" value="0" />
+                  </label>
+                  <label>
+                    Paiement
+                    <select name="paymentMethod" id="expense-payment-method"></select>
+                  </label>
+                  <label>
+                    Note
+                    <input type="text" name="note" placeholder="Detail optionnel" />
+                  </label>
+                  <p class="inline-note">
+                    Utilise cette section pour rattacher les depenses journalieres du vendeur.
+                  </p>
+                  <div class="form-actions">
+                    <button type="submit">Enregistrer la depense</button>
+                  </div>
+                </form>
+              </section>
+            </div>
+          </section>
+
+          <section class="panel list-panel">
+            <div class="panel-head">
+              <div>
+                <h3 id="history-title">Ventes produits</h3>
+                <span id="sales-counter">0 element</span>
+              </div>
+              <div class="history-toolbar">
+                <div class="segmented-controls">
+                  <button type="button" class="filter-chip is-active" data-history-mode="product">
+                    Produits
+                  </button>
+                  <button type="button" class="filter-chip" data-history-mode="service">
+                    Services
+                  </button>
+                  <button type="button" class="filter-chip" data-history-mode="expense">
+                    Depenses
+                  </button>
+                </div>
+                <div class="segmented-controls">
+                <button type="button" class="filter-chip is-active" data-sales-filter="today">
+                  Aujourd'hui
+                </button>
+                <button type="button" class="filter-chip" data-sales-filter="older">
+                  Anterieur
+                </button>
+                </div>
+              </div>
+            </div>
+            <div id="sales-list" class="list"></div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <template id="list-item-template">
+      <article class="list-item">
+        <div>
+          <h3></h3>
+          <p></p>
+        </div>
+        <strong></strong>
+      </article>
+    </template>
+
+    <script src="/app.js"></script>
+  </body>
+  </html>

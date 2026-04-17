@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GestionComV2 | Connexion admin</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body data-page="login">
+    <main class="login-shell">
+      <section class="login-card">
+        <p class="eyebrow">Administration</p>
+        <h1>Connexion admin</h1>
+        <p class="page-copy">
+          Les pages de gestion complete sont protegees par mot de passe.
+        </p>
+
+        <form id="admin-login-form" class="form-grid">
+          <label>
+            Mot de passe admin
+            <input
+              id="admin-password"
+              type="password"
+              name="password"
+              placeholder="Entrer le mot de passe"
+              required
+            />
+          </label>
+          <button type="submit">Ouvrir l'administration</button>
+        </form>
+
+        <p id="login-error" class="error-text"></p>
+        <a class="text-link" href="/ventes.html">Retour a l'espace vendeur</a>
+      </section>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
