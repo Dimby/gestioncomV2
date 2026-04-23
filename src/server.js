@@ -40,6 +40,7 @@ const PROTECTED_PAGES = new Set([
   "/approvisionnement.html",
   "/services.html",
   "/activite.html",
+  "/tresorerie.html",
   "/chat-ia.html"
 ]);
 

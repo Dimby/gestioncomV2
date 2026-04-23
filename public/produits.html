@@ -16,6 +16,7 @@
           <a class="nav-link" href="/services.html">Services</a>
           <a class="nav-link" href="/ventes.html">Ventes</a>
           <a class="nav-link" href="/activite.html">Activite</a>
+          <a class="nav-link" href="/tresorerie.html">Trésorerie</a>
           <a class="nav-link" href="/chat-ia.html">Chat avec IA</a>
           <button class="nav-link nav-button" type="button" data-action="admin-logout">
             Deconnexion admin
@@ -57,7 +58,22 @@
               </label>
               <label>
                 Categorie
-                <input type="text" name="category" placeholder="Fournitures scolaires" required />
+                <select name="category" required>
+                  <option value="">Selectionner une categorie</option>
+                  <option value="envelope">ENV (Enveloppe)</option>
+                  <option value="folder">DOS (Chemise)</option>
+                  <option value="office_paper">PAP (Papier bureau)</option>
+                  <option value="special_paper">BRISTOL (Papier bristol)</option>
+                  <option value="photo_paper">PHOTO (Papier photo)</option>
+                  <option value="colored_office_paper">COLOR (Papier couleur)</option>
+                  <option value="plastic_sleeve">POCH (Pochette)</option>
+                  <option value="spiral_binding">SPI (Spirales)</option>
+                  <option value="book_cover_film">COUV (Couverture livre)</option>
+                  <option value="lamination_film">PLAST (Plastification)</option>
+                  <option value="staple">AGRA (Agrafe)</option>
+                  <option value="notepad">BLOCNOTE (Bloc-note)</option>
+                  <option value="supplies">FOURNITURE SCOLAIRE</option>
+                </select>
               </label>
               <label>
                 Unite

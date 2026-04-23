@@ -207,6 +207,12 @@ p {
   font-size: 0.95rem;
 }
 
+.panel-copy {
+  margin: 4px 0 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
 .form-grid {
   display: grid;
   gap: 14px;
@@ -244,6 +250,11 @@ button {
   color: white;
   background: linear-gradient(135deg, var(--accent) 0%, #115e59 100%);
   cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .nav-button,
@@ -545,6 +556,91 @@ button {
   color: var(--muted);
 }
 
+.treasury-layout {
+  display: grid;
+  gap: 20px;
+}
+
+.treasury-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.period-switch,
+.period-navigator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.period-switch {
+  flex-wrap: wrap;
+}
+
+.period-navigator {
+  min-width: min(100%, 360px);
+  justify-content: flex-end;
+}
+
+.period-navigator strong {
+  min-width: 190px;
+  text-align: center;
+  text-transform: capitalize;
+}
+
+.icon-button {
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 50%;
+}
+
+.treasury-stats {
+  margin-bottom: 0;
+}
+
+.treasury-table-wrap {
+  overflow-x: auto;
+}
+
+.treasury-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+}
+
+.treasury-table th,
+.treasury-table td {
+  padding: 14px 12px;
+  border-bottom: 1px solid rgba(76, 58, 35, 0.1);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.treasury-table th:first-child,
+.treasury-table td:first-child {
+  text-align: left;
+}
+
+.treasury-table tbody th {
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.amount-positive {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.amount-negative {
+  color: var(--danger);
+  font-weight: 700;
+}
+
 @media (max-width: 1180px) {
   .page-grid.two-columns,
   .assistant-grid,
@@ -574,5 +670,19 @@ button {
 
   .entry-tabs {
     grid-template-columns: 1fr;
+  }
+
+  .treasury-toolbar,
+  .period-navigator {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .period-navigator {
+    min-width: 0;
+  }
+
+  .period-navigator strong {
+    min-width: 0;
   }
 }

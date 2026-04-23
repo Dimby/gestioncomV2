@@ -23,6 +23,25 @@ const dbStatus = document.querySelector("#db-status");
 const dbMeta = document.querySelector("#db-meta");
 const assistantHistory = [];
 let saleEditingId = null;
+const treasuryState = {
+  view: "week",
+  selectedDate: new Date()
+};
+const productCategoryLabels = {
+  envelope: "ENV (Enveloppe)",
+  folder: "DOS (Chemise)",
+  office_paper: "PAP (Papier bureau)",
+  special_paper: "BRISTOL (Papier bristol)",
+  photo_paper: "PHOTO (Papier photo)",
+  colored_office_paper: "COLOR (Papier couleur)",
+  plastic_sleeve: "POCH (Pochette)",
+  spiral_binding: "SPI (Spirales)",
+  book_cover_film: "COUV (Couverture livre)",
+  lamination_film: "PLAST (Plastification)",
+  staple: "AGRA (Agrafe)",
+  notepad: "BLOCNOTE (Bloc-note)",
+  supplies: "FOURNITURE SCOLAIRE"
+};
 
 function $(selector) {
   return document.querySelector(selector);
@@ -43,10 +62,92 @@ function formatDate(value) {
   }).format(new Date(value));
 }
 
+function formatProductCategory(value) {
+  return productCategoryLabels[value] || value || "FOURNITURE SCOLAIRE";
+}
+
 function sameLocalDay(value) {
   const current = new Date();
   const target = new Date(value);
   return current.toDateString() === target.toDateString();
+}
+
+function startOfLocalDay(value) {
+  const date = new Date(value);
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function addDays(value, days) {
+  const date = startOfLocalDay(value);
+  date.setDate(date.getDate() + days);
+  return date;
+}
+
+function addMonths(value, months) {
+  const date = startOfLocalDay(value);
+  date.setMonth(date.getMonth() + months);
+  return date;
+}
+
+function endOfMonth(value) {
+  const date = new Date(value);
+  return new Date(date.getFullYear(), date.getMonth() + 1, 0);
+}
+
+function getMonthWeekPeriods(value) {
+  const monthStart = new Date(value.getFullYear(), value.getMonth(), 1);
+  const monthEnd = endOfMonth(monthStart);
+  const periods = [];
+  let periodStart = startOfLocalDay(monthStart);
+
+  while (periodStart.getTime() <= monthEnd.getTime()) {
+    const daysUntilSunday = (7 - periodStart.getDay()) % 7;
+    const naturalPeriodEnd = addDays(periodStart, daysUntilSunday);
+    const periodEnd =
+      naturalPeriodEnd.getTime() > monthEnd.getTime() ? monthEnd : naturalPeriodEnd;
+
+    periods.push({
+      start: periodStart,
+      end: periodEnd
+    });
+
+    periodStart = addDays(periodEnd, 1);
+  }
+
+  return periods;
+}
+
+function getMonthWeekPeriodForDate(value) {
+  const target = startOfLocalDay(value);
+  const periods = getMonthWeekPeriods(target);
+
+  return (
+    periods.find(
+      (period) =>
+        target.getTime() >= period.start.getTime() &&
+        target.getTime() <= period.end.getTime()
+    ) || periods[0]
+  );
+}
+
+function formatDay(value) {
+  return new Intl.DateTimeFormat("fr-FR", {
+    weekday: "long",
+    day: "2-digit",
+    month: "short"
+  }).format(value);
+}
+
+function formatPeriodMonth(value) {
+  return new Intl.DateTimeFormat("fr-FR", {
+    month: "long",
+    year: "numeric"
+  }).format(value);
+}
+
+function isBetweenDates(value, start, end) {
+  const time = new Date(value).getTime();
+  return time >= start.getTime() && time <= end.getTime();
 }
 
 function setStatus(message, isError = false) {
@@ -274,7 +375,7 @@ function renderDashboard() {
     (product) =>
       createListItem(
         product.name,
-        `${product.category} • ${product.stockOnHand} ${product.unit} restant(s)`,
+        `${formatProductCategory(product.category)} • ${product.stockOnHand} ${product.unit} restant(s)`,
         `Seuil ${product.reorderLevel}`
       ),
     "Aucun produit sous seuil."
@@ -339,7 +440,7 @@ function setupProductsPage() {
     (product) =>
       createListItem(
         product.name,
-        `${product.category} • ${product.stockOnHand} ${product.unit} • seuil ${product.reorderLevel}`,
+        `${formatProductCategory(product.category)} • ${product.stockOnHand} ${product.unit} • seuil ${product.reorderLevel}`,
         `${formatCurrency(product.salePrice)} • ${formatCurrency(product.costPrice)} • ${formatCurrency(product.purchaseTotalPrice)}`
       ),
     "Aucun produit pour le moment."
@@ -353,6 +454,7 @@ function setupProductsPage() {
       try {
         await mutateData("/api/products", Object.fromEntries(new FormData(form).entries()));
         form.reset();
+        form.category.value = "";
         form.unit.value = "piece";
         form.salePrice.value = 0;
         form.costPrice.value = 0;
@@ -908,6 +1010,462 @@ function setupActivityPage() {
   );
 }
 
+function getTreasuryPeriod() {
+  const selectedMonthStart = new Date(
+    treasuryState.selectedDate.getFullYear(),
+    treasuryState.selectedDate.getMonth(),
+    1
+  );
+  const selectedMonthEnd = endOfMonth(selectedMonthStart);
+
+  if (treasuryState.view === "month") {
+    const monthStart = selectedMonthStart;
+    const monthEnd = selectedMonthEnd;
+    monthEnd.setHours(23, 59, 59, 999);
+
+    return {
+      start: monthStart,
+      end: monthEnd,
+      label: formatPeriodMonth(monthStart)
+    };
+  }
+
+  const selectedWeek = getMonthWeekPeriodForDate(treasuryState.selectedDate);
+  const weekStart = selectedWeek.start;
+  const weekEnd = new Date(selectedWeek.end);
+  weekEnd.setHours(23, 59, 59, 999);
+
+  return {
+    start: weekStart,
+    end: weekEnd,
+    label: `${formatDay(weekStart)} - ${formatDay(weekEnd)}`
+  };
+}
+
+function moveTreasuryPeriod(direction) {
+  if (treasuryState.view === "month") {
+    treasuryState.selectedDate = addMonths(treasuryState.selectedDate, direction);
+    return;
+  }
+
+  const periods = getMonthWeekPeriods(treasuryState.selectedDate);
+  const currentPeriod = getMonthWeekPeriodForDate(treasuryState.selectedDate);
+  const currentIndex = periods.findIndex(
+    (period) => period.start.getTime() === currentPeriod.start.getTime()
+  );
+  const nextIndex = Math.min(
+    Math.max(currentIndex + direction, 0),
+    periods.length - 1
+  );
+
+  treasuryState.selectedDate = periods[nextIndex].start;
+}
+
+function getSaleMargin(sale) {
+  return roundClientAmount(
+    (sale.items || []).reduce(
+      (sum, item) =>
+        sum + Number(item.total || 0) - Number(item.costPriceSnapshot || 0) * Number(item.quantity || 0),
+      0
+    )
+  );
+}
+
+function roundClientAmount(value) {
+  const number = Number(value || 0);
+  return Number.isFinite(number) ? Math.round(number * 100) / 100 : 0;
+}
+
+function getCashEntrySignedAmount(entry) {
+  return entry.direction === "out" ? -Number(entry.amount || 0) : Number(entry.amount || 0);
+}
+
+function getTreasuryTotals(start, end) {
+  const periodSales = (state.sales || []).filter((sale) =>
+    isBetweenDates(sale.createdAt, start, end)
+  );
+  const periodCashEntries = (state.cashEntries || []).filter((entry) =>
+    isBetweenDates(entry.createdAt, start, end)
+  );
+  const currentExpenses = periodCashEntries.filter((entry) => entry.type === "expense");
+  const reportBeforePeriod = roundClientAmount(
+    (state.cashEntries || [])
+      .filter((entry) => new Date(entry.createdAt).getTime() < start.getTime())
+      .reduce((sum, entry) => sum + getCashEntrySignedAmount(entry), 0)
+  );
+  const periodCashFlow = roundClientAmount(
+    periodCashEntries.reduce((sum, entry) => sum + getCashEntrySignedAmount(entry), 0)
+  );
+  const salesTotal = roundClientAmount(
+    periodSales.reduce((sum, sale) => sum + Number(sale.subtotal || 0), 0)
+  );
+  const expensesTotal = roundClientAmount(
+    currentExpenses.reduce((sum, entry) => sum + Number(entry.amount || 0), 0)
+  );
+  const stockPurchasesTotal = roundClientAmount(
+    periodCashEntries
+      .filter((entry) => entry.type === "stock_purchase")
+      .reduce((sum, entry) => sum + Number(entry.amount || 0), 0)
+  );
+  const grossMargin = roundClientAmount(
+    periodSales.reduce((sum, sale) => sum + getSaleMargin(sale), 0)
+  );
+
+  return {
+    periodSales,
+    periodCashEntries,
+    reportBeforePeriod,
+    salesTotal,
+    expensesTotal,
+    stockPurchasesTotal,
+    grossMargin,
+    netProfit: roundClientAmount(grossMargin - expensesTotal),
+    endingBalance: roundClientAmount(reportBeforePeriod + periodCashFlow)
+  };
+}
+
+function getTreasuryDayRows(start, end) {
+  const rows = [];
+  let report = roundClientAmount(
+    (state.cashEntries || [])
+      .filter((entry) => new Date(entry.createdAt).getTime() < start.getTime())
+      .reduce((sum, entry) => sum + getCashEntrySignedAmount(entry), 0)
+  );
+
+  for (let day = startOfLocalDay(start); day.getTime() <= end.getTime(); day = addDays(day, 1)) {
+    const dayEnd = addDays(day, 1);
+    const sales = (state.sales || []).filter(
+      (sale) =>
+        new Date(sale.createdAt).getTime() >= day.getTime() &&
+        new Date(sale.createdAt).getTime() < dayEnd.getTime()
+    );
+    const cashEntries = (state.cashEntries || []).filter(
+      (entry) =>
+        new Date(entry.createdAt).getTime() >= day.getTime() &&
+        new Date(entry.createdAt).getTime() < dayEnd.getTime()
+    );
+    const salesTotal = roundClientAmount(
+      sales.reduce((sum, sale) => sum + Number(sale.subtotal || 0), 0)
+    );
+    const expensesTotal = roundClientAmount(
+      cashEntries
+        .filter((entry) => entry.type === "expense")
+        .reduce((sum, entry) => sum + Number(entry.amount || 0), 0)
+    );
+    const grossMargin = roundClientAmount(
+      sales.reduce((sum, sale) => sum + getSaleMargin(sale), 0)
+    );
+    const cashFlow = roundClientAmount(
+      cashEntries.reduce((sum, entry) => sum + getCashEntrySignedAmount(entry), 0)
+    );
+    const endingBalance = roundClientAmount(report + cashFlow);
+
+    rows.push({
+      date: day,
+      report,
+      salesTotal,
+      expensesTotal,
+      grossMargin,
+      endingBalance
+    });
+    report = endingBalance;
+  }
+
+  return rows;
+}
+
+function getTreasuryWeekRows(start, end) {
+  const rows = [];
+  let report = roundClientAmount(
+    (state.cashEntries || [])
+      .filter((entry) => new Date(entry.createdAt).getTime() < start.getTime())
+      .reduce((sum, entry) => sum + getCashEntrySignedAmount(entry), 0)
+  );
+  let weekNumber = 1;
+
+  getMonthWeekPeriods(start).forEach((period) => {
+    const weekStart = period.start;
+    const weekEnd = addDays(period.end, 1);
+    const sales = (state.sales || []).filter(
+      (sale) =>
+        new Date(sale.createdAt).getTime() >= weekStart.getTime() &&
+        new Date(sale.createdAt).getTime() < weekEnd.getTime()
+    );
+    const cashEntries = (state.cashEntries || []).filter(
+      (entry) =>
+        new Date(entry.createdAt).getTime() >= weekStart.getTime() &&
+        new Date(entry.createdAt).getTime() < weekEnd.getTime()
+    );
+    const salesTotal = roundClientAmount(
+      sales.reduce((sum, sale) => sum + Number(sale.subtotal || 0), 0)
+    );
+    const expensesTotal = roundClientAmount(
+      cashEntries
+        .filter((entry) => entry.type === "expense")
+        .reduce((sum, entry) => sum + Number(entry.amount || 0), 0)
+    );
+    const grossMargin = roundClientAmount(
+      sales.reduce((sum, sale) => sum + getSaleMargin(sale), 0)
+    );
+    const cashFlow = roundClientAmount(
+      cashEntries.reduce((sum, entry) => sum + getCashEntrySignedAmount(entry), 0)
+    );
+    const endingBalance = roundClientAmount(report + cashFlow);
+
+    rows.push({
+      label: `Semaine ${String(weekNumber).padStart(2, "0")}`,
+      detail: `${formatDay(weekStart)} - ${formatDay(addDays(weekEnd, -1))}`,
+      report,
+      salesTotal,
+      expensesTotal,
+      grossMargin,
+      endingBalance
+    });
+    report = endingBalance;
+    weekNumber += 1;
+  });
+
+  return rows;
+}
+
+function getTreasuryRows(start, end) {
+  if (treasuryState.view === "month") {
+    return getTreasuryWeekRows(start, end);
+  }
+
+  return getTreasuryDayRows(start, end).map((row) => ({
+    ...row,
+    label: formatDay(row.date)
+  }));
+}
+
+function renderTreasuryStats(totals) {
+  const statsGrid = $("#treasury-stats");
+  if (!statsGrid || !statTemplate) {
+    return;
+  }
+
+  const stats = [
+    {
+      label: "Reporte avant periode",
+      value: formatCurrency(totals.reportBeforePeriod),
+      hint: "Solde de caisse precedent"
+    },
+    {
+      label: "Total des ventes",
+      value: formatCurrency(totals.salesTotal),
+      hint: `${totals.periodSales.length} vente(s) produits et services`
+    },
+    {
+      label: "Depenses courantes",
+      value: formatCurrency(totals.expensesTotal),
+      hint: "Hors approvisionnements stock"
+    },
+    {
+      label: "Benefice net",
+      value: formatCurrency(totals.netProfit),
+      hint: "Marge brute moins depenses"
+    },
+    {
+      label: "Solde fin periode",
+      value: formatCurrency(totals.endingBalance),
+      hint: `Achats stock: ${formatCurrency(totals.stockPurchasesTotal)}`
+    }
+  ];
+
+  statsGrid.innerHTML = "";
+  stats.forEach((stat) => {
+    const node = statTemplate.content.firstElementChild.cloneNode(true);
+    node.querySelector("span").textContent = stat.label;
+    node.querySelector("strong").textContent = stat.value;
+    node.querySelector("small").textContent = stat.hint;
+    statsGrid.appendChild(node);
+  });
+}
+
+function renderTreasuryRows(rows) {
+  const body = $("#treasury-days-body");
+  const count = $("#treasury-days-count");
+
+  if (count) {
+    count.textContent =
+      treasuryState.view === "month"
+        ? `${rows.length} semaine(s)`
+        : `${rows.length} jour(s)`;
+  }
+
+  if (!body) {
+    return;
+  }
+
+  body.innerHTML = "";
+  rows.forEach((row) => {
+    const tr = document.createElement("tr");
+    [
+      row.detail ? `${row.label} • ${row.detail}` : row.label,
+      formatCurrency(row.report),
+      formatCurrency(row.salesTotal),
+      `-${formatCurrency(row.expensesTotal)}`,
+      formatCurrency(row.grossMargin),
+      formatCurrency(row.endingBalance)
+    ].forEach((value, index) => {
+      const cell = document.createElement(index === 0 ? "th" : "td");
+      cell.textContent = value;
+      if (index === 2 || index === 4) {
+        cell.className = "amount-positive";
+      }
+      if (index === 3) {
+        cell.className = "amount-negative";
+      }
+      tr.appendChild(cell);
+    });
+    body.appendChild(tr);
+  });
+}
+
+function renderTreasuryLists(totals) {
+  const sortedMovements = [...totals.periodCashEntries].sort(
+    (left, right) => new Date(right.createdAt) - new Date(left.createdAt)
+  );
+  const sortedSales = [...totals.periodSales].sort(
+    (left, right) => new Date(right.createdAt) - new Date(left.createdAt)
+  );
+
+  const movementsCount = $("#treasury-movements-count");
+  const salesCount = $("#treasury-sales-count");
+  if (movementsCount) {
+    movementsCount.textContent = `${sortedMovements.length} mouvement(s)`;
+  }
+  if (salesCount) {
+    salesCount.textContent = `${sortedSales.length} vente(s)`;
+  }
+
+  renderList(
+    $("#treasury-movements-list"),
+    sortedMovements,
+    (entry) =>
+      createListItem(
+        entry.label || entry.type,
+        `${entry.type} • ${entry.paymentMethod} • ${formatDate(entry.createdAt)}`,
+        `${entry.direction === "out" ? "-" : "+"}${formatCurrency(entry.amount)}`
+      ),
+    "Aucun mouvement sur cette periode."
+  );
+
+  renderList(
+    $("#treasury-sales-list"),
+    sortedSales,
+    (sale) =>
+      createListItem(
+        sale.reference,
+        `${sale.customerName} • ${sale.items.length} ligne(s) • marge ${formatCurrency(
+          getSaleMargin(sale)
+        )}`,
+        formatCurrency(sale.subtotal)
+      ),
+    "Aucune vente sur cette periode."
+  );
+}
+
+function renderTreasuryPage() {
+  const period = getTreasuryPeriod();
+  const totals = getTreasuryTotals(period.start, period.end);
+  const rows = getTreasuryRows(period.start, period.end);
+  const periodLabel = $("#treasury-period-label");
+  const daysTitle = $("#treasury-days-title");
+  const daysCopy = $("#treasury-days-copy");
+  const firstColumn = $("#treasury-period-column");
+  const prevButton = $("[data-treasury-month='prev']");
+  const nextButton = $("[data-treasury-month='next']");
+  const monthWeekPeriods = getMonthWeekPeriods(treasuryState.selectedDate);
+  const currentMonthWeek = getMonthWeekPeriodForDate(treasuryState.selectedDate);
+  const currentMonthWeekIndex = monthWeekPeriods.findIndex(
+    (entry) => entry.start.getTime() === currentMonthWeek.start.getTime()
+  );
+
+  if (periodLabel) {
+    periodLabel.textContent = period.label;
+  }
+  if (daysTitle) {
+    daysTitle.textContent =
+      treasuryState.view === "month" ? "Semaines du mois" : "Jours de la semaine";
+  }
+  if (daysCopy) {
+    daysCopy.textContent =
+      treasuryState.view === "month"
+        ? "Chaque ligne regroupe les mouvements d'une semaine du mois selectionne."
+        : "Les depenses courantes sont retirees du solde journalier.";
+  }
+  if (firstColumn) {
+    firstColumn.textContent = treasuryState.view === "month" ? "Semaine" : "Jour";
+  }
+  if (prevButton) {
+    prevButton.setAttribute(
+      "aria-label",
+      treasuryState.view === "month" ? "Mois precedent" : "Semaine precedente"
+    );
+    prevButton.setAttribute(
+      "title",
+      treasuryState.view === "month" ? "Mois precedent" : "Semaine precedente"
+    );
+    prevButton.disabled =
+      treasuryState.view === "week" && currentMonthWeekIndex <= 0;
+  }
+  if (nextButton) {
+    nextButton.setAttribute(
+      "aria-label",
+      treasuryState.view === "month" ? "Mois suivant" : "Semaine suivante"
+    );
+    nextButton.setAttribute(
+      "title",
+      treasuryState.view === "month" ? "Mois suivant" : "Semaine suivante"
+    );
+    nextButton.disabled =
+      treasuryState.view === "week" &&
+      currentMonthWeekIndex >= monthWeekPeriods.length - 1;
+  }
+
+  document.querySelectorAll("[data-treasury-view]").forEach((button) => {
+    button.classList.toggle("is-active", button.dataset.treasuryView === treasuryState.view);
+    button.setAttribute(
+      "aria-selected",
+      button.dataset.treasuryView === treasuryState.view ? "true" : "false"
+    );
+  });
+
+  renderTreasuryStats(totals);
+  renderTreasuryRows(rows);
+  renderTreasuryLists(totals);
+}
+
+function setupTreasuryPage() {
+  document.querySelectorAll("[data-treasury-view]").forEach((button) => {
+    if (button.dataset.bound) {
+      return;
+    }
+
+    button.dataset.bound = "true";
+    button.addEventListener("click", () => {
+      treasuryState.view = button.dataset.treasuryView || "week";
+      renderTreasuryPage();
+    });
+  });
+
+  document.querySelectorAll("[data-treasury-month]").forEach((button) => {
+    if (button.dataset.bound) {
+      return;
+    }
+
+    button.dataset.bound = "true";
+    button.addEventListener("click", () => {
+      moveTreasuryPeriod(button.dataset.treasuryMonth === "prev" ? -1 : 1);
+      renderTreasuryPage();
+    });
+  });
+
+  renderTreasuryPage();
+}
+
 function appendAssistantMessage(role, text) {
   const thread = $("#assistant-messages");
   const template = $("#assistant-message-template");
@@ -1066,6 +1624,11 @@ function renderPage() {
 
   if (page === "activity") {
     setupActivityPage();
+    return;
+  }
+
+  if (page === "treasury") {
+    setupTreasuryPage();
     return;
   }
 

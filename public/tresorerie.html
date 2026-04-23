@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GestionComV2 | Trésorerie</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body data-page="treasury" data-role="admin">
+    <div class="app-shell">
+      <aside class="sidebar">
+        <nav class="nav-links">
+          <a class="nav-link" href="/index.html">Tableau de bord</a>
+          <a class="nav-link" href="/produits.html">Produits</a>
+          <a class="nav-link" href="/approvisionnement.html">Approvisionnement</a>
+          <a class="nav-link" href="/services.html">Services</a>
+          <a class="nav-link" href="/ventes.html">Ventes</a>
+          <a class="nav-link" href="/activite.html">Activite</a>
+          <a class="nav-link is-active" href="/tresorerie.html">Trésorerie</a>
+          <a class="nav-link" href="/chat-ia.html">Chat avec IA</a>
+          <button class="nav-link nav-button" type="button" data-action="admin-logout">
+            Deconnexion admin
+          </button>
+        </nav>
+        <div class="brand-block">
+          <p class="eyebrow">Multiservice</p>
+          <h1>GestionComV2</h1>
+          <p class="brand-copy">Stock, prestations et caisse locale.</p>
+        </div>
+      </aside>
+
+      <div class="content-shell">
+        <header class="page-header compact">
+          <div>
+            <p class="eyebrow">Finance</p>
+            <h2>Trésorerie</h2>
+            <p class="page-copy">
+              Suivi des ventes, depenses, solde reporte et marge brute par jour.
+            </p>
+          </div>
+          <div class="hero-card">
+            <p>Etat de la base</p>
+            <strong id="db-status">Chargement...</strong>
+            <small id="db-meta">Initialisation.</small>
+          </div>
+        </header>
+
+        <main class="treasury-layout">
+          <section class="panel treasury-toolbar" aria-label="Filtres tresorerie">
+            <div class="period-switch" role="tablist" aria-label="Mode de periode">
+              <button
+                type="button"
+                class="filter-chip is-active"
+                data-treasury-view="week"
+                aria-selected="true"
+              >
+                Hebdomadaire
+              </button>
+              <button
+                type="button"
+                class="filter-chip"
+                data-treasury-view="month"
+                aria-selected="false"
+              >
+                Mensuel
+              </button>
+            </div>
+            <div class="period-navigator">
+              <button
+                type="button"
+                class="icon-button"
+                data-treasury-month="prev"
+                aria-label="Mois precedent"
+                title="Mois precedent"
+              >
+                &lt;
+              </button>
+              <strong id="treasury-period-label">Periode</strong>
+              <button
+                type="button"
+                class="icon-button"
+                data-treasury-month="next"
+                aria-label="Mois suivant"
+                title="Mois suivant"
+              >
+                &gt;
+              </button>
+            </div>
+          </section>
+
+          <section class="stats-grid treasury-stats" id="treasury-stats"></section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <div>
+                <h3 id="treasury-days-title">Jours de la semaine</h3>
+                <p class="panel-copy" id="treasury-days-copy">
+                  Les depenses courantes sont retirees du solde journalier.
+                </p>
+              </div>
+              <span id="treasury-days-count">0 jour</span>
+            </div>
+            <div class="treasury-table-wrap">
+              <table class="treasury-table">
+                <thead>
+                  <tr>
+                    <th id="treasury-period-column">Jour</th>
+                    <th>Reporte</th>
+                    <th>Ventes</th>
+                    <th>Depenses</th>
+                    <th>Marge brute</th>
+                    <th>Solde</th>
+                  </tr>
+                </thead>
+                <tbody id="treasury-days-body"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="page-grid two-columns">
+            <section class="panel list-panel">
+              <div class="panel-head">
+                <h3>Mouvements de la periode</h3>
+                <span id="treasury-movements-count">0 mouvement</span>
+              </div>
+              <div id="treasury-movements-list" class="list"></div>
+            </section>
+
+            <section class="panel list-panel">
+              <div class="panel-head">
+                <h3>Detail des ventes</h3>
+                <span id="treasury-sales-count">0 vente</span>
+              </div>
+              <div id="treasury-sales-list" class="list"></div>
+            </section>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <template id="list-item-template">
+      <article class="list-item">
+        <div>
+          <h3></h3>
+          <p></p>
+        </div>
+        <strong></strong>
+      </article>
+    </template>
+
+    <template id="stat-card-template">
+      <article class="stat-card">
+        <span></span>
+        <strong></strong>
+        <small></small>
+      </article>
+    </template>
+
+    <script src="/app.js"></script>
+  </body>
+  </html>

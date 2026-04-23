@@ -3,12 +3,82 @@ const crypto = require("crypto");
 const STORE_VERSION = 3;
 
 const DEFAULT_PRODUCT_CATEGORIES = [
-  "Fournitures scolaires",
-  "Papeterie",
-  "Papiers",
-  "Informatique",
-  "Divers"
+  "envelope",
+  "folder",
+  "office_paper",
+  "special_paper",
+  "photo_paper",
+  "colored_office_paper",
+  "plastic_sleeve",
+  "spiral_binding",
+  "book_cover_film",
+  "lamination_film",
+  "staple",
+  "notepad",
+  "supplies"
 ];
+
+const PRODUCT_CATEGORY_ALIASES = new Map(
+  [
+    ["envelope", "envelope"],
+    ["env", "envelope"],
+    ["enveloppe", "envelope"],
+    ["env enveloppe", "envelope"],
+    ["folder", "folder"],
+    ["dos", "folder"],
+    ["chemise", "folder"],
+    ["dos chemise", "folder"],
+    ["office_paper", "office_paper"],
+    ["pap", "office_paper"],
+    ["papier", "office_paper"],
+    ["papiers", "office_paper"],
+    ["papier bureau", "office_paper"],
+    ["papeterie", "office_paper"],
+    ["pap papier bureau", "office_paper"],
+    ["special_paper", "special_paper"],
+    ["bristol", "special_paper"],
+    ["papier bristol", "special_paper"],
+    ["bristol papier bristol", "special_paper"],
+    ["photo_paper", "photo_paper"],
+    ["photo", "photo_paper"],
+    ["papier photo", "photo_paper"],
+    ["photo papier photo", "photo_paper"],
+    ["colored_office_paper", "colored_office_paper"],
+    ["color", "colored_office_paper"],
+    ["papier couleur", "colored_office_paper"],
+    ["color papier couleur", "colored_office_paper"],
+    ["plastic_sleeve", "plastic_sleeve"],
+    ["poch", "plastic_sleeve"],
+    ["pochette", "plastic_sleeve"],
+    ["poch pochette", "plastic_sleeve"],
+    ["spiral_binding", "spiral_binding"],
+    ["spi", "spiral_binding"],
+    ["spirales", "spiral_binding"],
+    ["spi spirales", "spiral_binding"],
+    ["book_cover_film", "book_cover_film"],
+    ["couv", "book_cover_film"],
+    ["couverture livre", "book_cover_film"],
+    ["couv couverture livre", "book_cover_film"],
+    ["lamination_film", "lamination_film"],
+    ["plast", "lamination_film"],
+    ["plastification", "lamination_film"],
+    ["plast plastification", "lamination_film"],
+    ["staple", "staple"],
+    ["agra", "staple"],
+    ["agrafe", "staple"],
+    ["agra agrafe", "staple"],
+    ["notepad", "notepad"],
+    ["blocnote", "notepad"],
+    ["bloc note", "notepad"],
+    ["bloc-note", "notepad"],
+    ["blocnote bloc note", "notepad"],
+    ["supplies", "supplies"],
+    ["fourniture scolaire", "supplies"],
+    ["fournitures scolaires", "supplies"],
+    ["divers", "supplies"],
+    ["informatique", "supplies"]
+  ].map(([source, target]) => [normalizeTextKey(source), target])
+);
 
 const DEFAULT_SERVICE_CATEGORIES = [
   "Impression",
@@ -71,6 +141,26 @@ function ensureUnique(values) {
   return [...new Set(values.filter(Boolean).map((value) => String(value).trim()))];
 }
 
+function normalizeTextKey(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[()]/g, " ")
+    .replace(/[_\s]+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function normalizeProductCategory(value) {
+  const rawValue = String(value || "").trim();
+
+  if (DEFAULT_PRODUCT_CATEGORIES.includes(rawValue)) {
+    return rawValue;
+  }
+
+  return PRODUCT_CATEGORY_ALIASES.get(normalizeTextKey(rawValue)) || "supplies";
+}
+
 function normalizeProduct(rawProduct = {}) {
   const now = nowIso();
   const stockOnHand = parseNumber(
@@ -87,7 +177,7 @@ function normalizeProduct(rawProduct = {}) {
     id: rawProduct.id || createId(),
     sku: String(rawProduct.sku || "").trim(),
     name: String(rawProduct.name || "").trim(),
-    category: String(rawProduct.category || "Divers").trim(),
+    category: normalizeProductCategory(rawProduct.category),
     unit: String(rawProduct.unit || "piece").trim() || "piece",
     salePrice: roundAmount(rawProduct.salePrice ?? rawProduct.unitPrice ?? 0),
     costPrice,
@@ -232,11 +322,8 @@ function normalizeStore(rawStore = {}) {
   }
 
   const baseStore = createDefaultStore();
-  const productCategories = ensureUnique([
-    ...baseStore.catalog.productCategories,
-    ...(rawStore.catalog?.productCategories || []),
-    ...((rawStore.products || []).map((product) => product.category))
-  ]);
+  const products = (rawStore.products || []).map(normalizeProduct);
+  const productCategories = [...baseStore.catalog.productCategories];
   const serviceCategories = ensureUnique([
     ...baseStore.catalog.serviceCategories,
     ...(rawStore.catalog?.serviceCategories || []),
@@ -262,7 +349,7 @@ function normalizeStore(rawStore = {}) {
       serviceCategories,
       paymentMethods
     },
-    products: (rawStore.products || []).map(normalizeProduct),
+    products,
     services: (rawStore.services || []).map(normalizeService),
     stockMovements: (rawStore.stockMovements || []).map(normalizeMovement),
     sales: (rawStore.sales || []).map(normalizeSale),
@@ -317,7 +404,7 @@ function addProduct(store, payload = {}) {
     ...store,
     catalog: {
       ...store.catalog,
-      productCategories: ensureUnique([...store.catalog.productCategories, category])
+      productCategories: [...DEFAULT_PRODUCT_CATEGORIES]
     },
     products: [product, ...store.products],
     activityLog: addActivity(
