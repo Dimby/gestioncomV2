@@ -340,7 +340,7 @@ function setupProductsPage() {
       createListItem(
         product.name,
         `${product.category} • ${product.stockOnHand} ${product.unit} • seuil ${product.reorderLevel}`,
-        `${formatCurrency(product.salePrice)} • ${formatCurrency(product.costPrice)} • total ${formatCurrency(product.purchaseTotalPrice)}`
+        `${formatCurrency(product.salePrice)} • ${formatCurrency(product.costPrice)} • ${formatCurrency(product.purchaseTotalPrice)}`
       ),
     "Aucun produit pour le moment."
   );
