@@ -34,6 +34,28 @@ function redirect(response, location) {
   response.end();
 }
 
+function isClientError(error) {
+  const message = String(error?.message || "");
+  return [
+    /^JSON invalide\.$/,
+    /^Payload trop volumineux\.$/,
+    /^Une vente doit contenir/,
+    /^Type de ligne de vente invalide\.$/,
+    /^La quantite/,
+    /^Un produit/,
+    /^Un service/,
+    /^Produit utilise introuvable/,
+    /^Stock insuffisant/,
+    /^Le nom du produit/,
+    /^Le nom du service/,
+    /^Le libelle/,
+    /^Le montant/,
+    /^Produit introuvable\.$/,
+    /^Service introuvable\.$/,
+    /^Vente introuvable\.$/
+  ].some((pattern) => pattern.test(message));
+}
+
 const PROTECTED_PAGES = new Set([
   "/index.html",
   "/produits.html",
@@ -84,10 +106,12 @@ async function requestListener(request, response) {
 
     await serveStatic(response, url.pathname);
   } catch (error) {
-    sendJson(response, 500, {
-      error: "Erreur serveur.",
-      details: error.message
-    });
+    if (url.pathname.startsWith("/api/") && isClientError(error)) {
+      sendJson(response, 400, { error: error.message });
+      return;
+    }
+
+    sendJson(response, 500, { error: "Erreur serveur." });
   }
 }
 

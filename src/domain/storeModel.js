@@ -99,6 +99,28 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+function parseOperationDate(value, fallback = nowIso()) {
+  const rawValue = String(value || "").trim();
+  const match = rawValue.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+
+  if (!match) {
+    return fallback;
+  }
+
+  const current = new Date();
+  const date = new Date(
+    Number(match[1]),
+    Number(match[2]) - 1,
+    Number(match[3]),
+    current.getHours(),
+    current.getMinutes(),
+    current.getSeconds(),
+    current.getMilliseconds()
+  );
+
+  return Number.isNaN(date.getTime()) ? fallback : date.toISOString();
+}
+
 function roundAmount(value) {
   const number = Number(value || 0);
   return Number.isFinite(number) ? Math.round(number * 100) / 100 : 0;
@@ -161,6 +183,45 @@ function normalizeProductCategory(value) {
   return PRODUCT_CATEGORY_ALIASES.get(normalizeTextKey(rawValue)) || "supplies";
 }
 
+function normalizeServiceUsedProducts(value) {
+  let entries = value;
+
+  if (typeof entries === "string") {
+    try {
+      entries = JSON.parse(entries);
+    } catch {
+      entries = [];
+    }
+  }
+
+  if (!Array.isArray(entries)) {
+    return [];
+  }
+
+  return entries
+    .map((entry) => ({
+      productId: String(entry.productId || entry.refId || "").trim(),
+      quantity: parseNumber(entry.quantity, 0)
+    }))
+    .filter((entry) => entry.productId && entry.quantity > 0);
+}
+
+function normalizeUsedProductsSnapshot(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((entry) => ({
+      productId: String(entry.productId || "").trim(),
+      label: String(entry.label || "").trim(),
+      quantity: parseNumber(entry.quantity, 0),
+      unit: String(entry.unit || "").trim(),
+      costPriceSnapshot: roundAmount(entry.costPriceSnapshot ?? 0)
+    }))
+    .filter((entry) => entry.productId && entry.quantity > 0);
+}
+
 function normalizeProduct(rawProduct = {}) {
   const now = nowIso();
   const stockOnHand = parseNumber(
@@ -199,7 +260,11 @@ function normalizeService(rawService = {}) {
     code: String(rawService.code || "").trim(),
     name: String(rawService.name || "").trim(),
     category: String(rawService.category || "Divers").trim(),
+    usedProducts: normalizeServiceUsedProducts(
+      rawService.usedProducts || rawService.products
+    ),
     basePrice: roundAmount(rawService.basePrice ?? rawService.price ?? 0),
+    info: String(rawService.info || rawService.description || "").trim(),
     isActive: rawService.isActive !== false,
     createdAt: rawService.createdAt || now,
     updatedAt: rawService.updatedAt || now
@@ -259,7 +324,10 @@ function normalizeSale(rawSale = {}) {
           unit: String(item.unit || "").trim(),
           unitPrice: roundAmount(item.unitPrice),
           total: roundAmount(item.total),
-          costPriceSnapshot: roundAmount(item.costPriceSnapshot ?? 0)
+          costPriceSnapshot: roundAmount(item.costPriceSnapshot ?? 0),
+          usedProductsSnapshot: normalizeUsedProductsSnapshot(
+            item.usedProductsSnapshot || []
+          )
         }))
       : [],
     subtotal: roundAmount(rawSale.subtotal),
@@ -424,10 +492,21 @@ function addService(store, payload = {}) {
     throw new Error("Le nom du service est obligatoire.");
   }
 
+  const usedProducts = normalizeServiceUsedProducts(payload.usedProducts);
+  const productsById = new Map(store.products.map((product) => [product.id, product]));
+  const unknownUsedProduct = usedProducts.find(
+    (entry) => !productsById.has(entry.productId)
+  );
+
+  if (unknownUsedProduct) {
+    throw new Error("Un produit utilise par le service est introuvable.");
+  }
+
   const service = normalizeService({
     ...payload,
     name,
-    category: String(payload.category || "Divers").trim()
+    category: String(payload.category || "Divers").trim(),
+    usedProducts
   });
 
   return {
@@ -574,6 +653,41 @@ function commitSale(store, payload = {}, options = {}) {
       throw new Error("Un service de la vente est introuvable.");
     }
 
+    const usedProductsSnapshot = (service.usedProducts || []).map((usedProduct) => {
+      const product = productsById.get(usedProduct.productId);
+
+      if (!product) {
+        throw new Error(`Produit utilise introuvable pour ${service.name}.`);
+      }
+
+      const requiredQuantity = roundAmount(usedProduct.quantity * quantity);
+      const currentProduct = updatedProducts.get(product.id) || product;
+
+      if (currentProduct.stockOnHand < requiredQuantity) {
+        throw new Error(`Stock insuffisant pour ${product.name}.`);
+      }
+
+      updatedProducts.set(product.id, {
+        ...currentProduct,
+        stockOnHand: roundAmount(currentProduct.stockOnHand - requiredQuantity),
+        updatedAt: nowIso()
+      });
+
+      return {
+        productId: product.id,
+        label: product.name,
+        quantity: requiredQuantity,
+        unit: product.unit,
+        costPriceSnapshot: roundAmount(product.costPrice)
+      };
+    });
+    const serviceUnitCost = roundAmount(
+      usedProductsSnapshot.reduce(
+        (sum, entry) => sum + entry.quantity * entry.costPriceSnapshot,
+        0
+      ) / quantity
+    );
+
     return {
       id: createId(),
       kind: "service",
@@ -583,7 +697,8 @@ function commitSale(store, payload = {}, options = {}) {
       unit: "service",
       unitPrice: roundAmount(item.unitPrice ?? service.basePrice),
       total: roundAmount(quantity * (item.unitPrice ?? service.basePrice)),
-      costPriceSnapshot: 0
+      costPriceSnapshot: serviceUnitCost,
+      usedProductsSnapshot
     };
   });
 
@@ -596,7 +711,7 @@ function commitSale(store, payload = {}, options = {}) {
   const saleId = options.saleId || createId();
   const saleReference =
     options.reference || buildReference("VTE", store.sales.length);
-  const createdAt = options.createdAt || nowIso();
+  const createdAt = options.createdAt || parseOperationDate(payload.operationDate);
   const sale = normalizeSale({
     id: saleId,
     reference: saleReference,
@@ -615,7 +730,7 @@ function commitSale(store, payload = {}, options = {}) {
     (product) => updatedProducts.get(product.id) || product
   );
 
-  const stockMovements = saleItems
+  const productSaleMovements = saleItems
     .filter((item) => item.kind === "product")
     .map((item) =>
       normalizeMovement({
@@ -623,9 +738,25 @@ function commitSale(store, payload = {}, options = {}) {
         type: "sale",
         quantityDelta: -item.quantity,
         note: `Vente ${sale.reference}`,
-        referenceId: sale.id
+        referenceId: sale.id,
+        createdAt
       })
     );
+  const serviceUsageMovements = saleItems.flatMap((item) =>
+    item.kind === "service"
+      ? (item.usedProductsSnapshot || []).map((usedProduct) =>
+          normalizeMovement({
+            productId: usedProduct.productId,
+            type: "service_usage",
+            quantityDelta: -usedProduct.quantity,
+            note: `Service ${sale.reference} - ${item.label}`,
+            referenceId: sale.id,
+            createdAt
+          })
+        )
+      : []
+  );
+  const stockMovements = [...productSaleMovements, ...serviceUsageMovements];
 
   const cashEntries =
     amountPaid > 0
@@ -636,7 +767,8 @@ function commitSale(store, payload = {}, options = {}) {
             amount: amountPaid,
             paymentMethod,
             label: `Encaissement ${sale.reference}`,
-            referenceId: sale.id
+            referenceId: sale.id,
+            createdAt
           }),
           ...store.cashEntries
         ]
@@ -671,6 +803,9 @@ function createExpense(store, payload = {}) {
   const amount = roundAmount(payload.amount);
   const paymentMethod = String(payload.paymentMethod || "cash").trim() || "cash";
   const note = String(payload.note || "").trim();
+  const expenseType = String(payload.expenseType || "expense").trim();
+  const entryType = expenseType === "order" ? "stock_purchase" : "expense";
+  const createdAt = parseOperationDate(payload.operationDate);
 
   if (!label) {
     throw new Error("Le libelle de la depense est obligatoire.");
@@ -681,12 +816,13 @@ function createExpense(store, payload = {}) {
   }
 
   const cashEntry = normalizeCashEntry({
-    type: "expense",
+    type: entryType,
     direction: "out",
     amount,
     paymentMethod,
     label,
-    referenceId: null
+    referenceId: null,
+    createdAt
   });
 
   return {
@@ -694,18 +830,25 @@ function createExpense(store, payload = {}) {
     cashEntries: [cashEntry, ...store.cashEntries],
     activityLog: addActivity(
       store,
-      "expense_created",
+      entryType === "stock_purchase" ? "order_cashout_created" : "expense_created",
       label,
-      note ? `${amount} depense(s) • ${note}` : `${amount} depense(s).`
+      note
+        ? `${amount} decaisse(s) • ${note}`
+        : `${amount} decaisse(s).`
     )
   };
 }
 
 function rollbackSaleEffects(store, sale) {
   const products = store.products.map((product) => {
-    const restoredQuantity = sale.items
+    const productSaleQuantity = sale.items
       .filter((item) => item.kind === "product" && item.refId === product.id)
       .reduce((sum, item) => sum + item.quantity, 0);
+    const serviceUsageQuantity = sale.items
+      .flatMap((item) => item.usedProductsSnapshot || [])
+      .filter((usedProduct) => usedProduct.productId === product.id)
+      .reduce((sum, usedProduct) => sum + usedProduct.quantity, 0);
+    const restoredQuantity = roundAmount(productSaleQuantity + serviceUsageQuantity);
 
     if (!restoredQuantity) {
       return product;
@@ -740,7 +883,9 @@ function updateSale(store, saleId, payload = {}) {
   const updatedStore = commitSale(rolledBackStore, payload, {
     saleId: sale.id,
     reference: sale.reference,
-    createdAt: sale.createdAt
+    createdAt: payload.operationDate
+      ? parseOperationDate(payload.operationDate, sale.createdAt)
+      : sale.createdAt
   });
   const refreshedSale = updatedStore.sales[0];
 

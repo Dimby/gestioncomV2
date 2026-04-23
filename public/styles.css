@@ -313,6 +313,10 @@ button:disabled {
   gap: 8px;
 }
 
+.entry-operation-date {
+  margin-bottom: 14px;
+}
+
 .entry-tabs {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -344,6 +348,18 @@ button:disabled {
   display: grid;
   gap: 10px;
   justify-items: end;
+}
+
+.date-navigator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.date-navigator strong {
+  min-width: 210px;
+  text-align: center;
+  text-transform: capitalize;
 }
 
 .filter-chip {
@@ -556,6 +572,65 @@ button:disabled {
   color: var(--muted);
 }
 
+.service-products-field {
+  display: grid;
+  gap: 10px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.service-products-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 110px auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.service-products-controls button {
+  width: auto;
+  text-align: center;
+}
+
+.selected-products-list {
+  display: grid;
+  gap: 8px;
+}
+
+.selected-product-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid rgba(76, 58, 35, 0.08);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.selected-product-item div {
+  display: grid;
+  gap: 3px;
+}
+
+.selected-product-item strong,
+.selected-product-item span {
+  margin: 0;
+}
+
+.selected-product-item span {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.selected-product-item button {
+  width: auto;
+}
+
+.empty-state.compact {
+  padding: 12px;
+  text-align: left;
+}
+
 .treasury-layout {
   display: grid;
   gap: 20px;
@@ -669,6 +744,10 @@ button:disabled {
   }
 
   .entry-tabs {
+    grid-template-columns: 1fr;
+  }
+
+  .service-products-controls {
     grid-template-columns: 1fr;
   }
 

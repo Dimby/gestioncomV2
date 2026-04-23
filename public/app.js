@@ -23,6 +23,8 @@ const dbStatus = document.querySelector("#db-status");
 const dbMeta = document.querySelector("#db-meta");
 const assistantHistory = [];
 let saleEditingId = null;
+let serviceUsedProducts = [];
+let salesHistoryDate = startOfLocalDay(new Date());
 const treasuryState = {
   view: "week",
   selectedDate: new Date()
@@ -62,12 +64,61 @@ function formatDate(value) {
   }).format(new Date(value));
 }
 
+function formatDayLabel(value) {
+  const target = startOfLocalDay(value);
+  const today = startOfLocalDay(new Date());
+  const yesterday = addDays(today, -1);
+  const tomorrow = addDays(today, 1);
+
+  if (target.getTime() === today.getTime()) {
+    return "Aujourd'hui";
+  }
+  if (target.getTime() === yesterday.getTime()) {
+    return "Hier";
+  }
+  if (target.getTime() === tomorrow.getTime()) {
+    return "Demain";
+  }
+
+  return new Intl.DateTimeFormat("fr-FR", {
+    weekday: "long",
+    day: "2-digit",
+    month: "long",
+    year: "numeric"
+  }).format(target);
+}
+
+function formatInputDate(value = new Date()) {
+  const date = new Date(value);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 function formatProductCategory(value) {
   return productCategoryLabels[value] || value || "FOURNITURE SCOLAIRE";
 }
 
 function formatSupplier(value) {
   return String(value || "").trim() || "Fournisseur non renseigne";
+}
+
+function getProductById(productId) {
+  return state.products.find((product) => product.id === productId);
+}
+
+function formatServiceUsedProducts(usedProducts = []) {
+  if (!usedProducts.length) {
+    return "Aucun produit utilise";
+  }
+
+  return usedProducts
+    .map((entry) => {
+      const product = getProductById(entry.productId);
+      return `${product?.name || "Produit supprime"} x ${entry.quantity}`;
+    })
+    .join(", ");
 }
 
 function sameLocalDay(value) {
@@ -386,6 +437,7 @@ function renderDashboard() {
       ),
     "Aucun produit sous seuil."
   );
+ 
 
   renderList(
     $("#sales-list"),
@@ -393,7 +445,7 @@ function renderDashboard() {
     (sale) =>
       createListItem(
         sale.reference,
-        `${sale.customerName} • ${sale.items.length} ligne(s) • ${formatDate(
+        `${sale.items.length} ligne(s) • ${formatDate(
           sale.createdAt
         )}`,
         formatCurrency(sale.subtotal)
@@ -437,8 +489,6 @@ function setupProductsPage() {
   if (count) {
     count.textContent = `${state.products.length} produit(s)`;
   }
-
-  console.log('state.products', state.products)
 
   renderList(
     $("#products-list"),
@@ -525,10 +575,61 @@ function setupStockPage() {
 function setupServicesPage() {
   const form = $("#service-form");
   const count = $("#services-count");
+  const productSelect = $("#service-product-id");
+  const productQuantityInput = $("#service-product-quantity");
+  const productList = $("#service-products-list");
+  const usedProductsInput = $("#service-used-products");
+  const addProductButton = $("[data-action='add-service-product']");
+
+  function renderServiceProductSelection() {
+    if (usedProductsInput) {
+      usedProductsInput.value = JSON.stringify(serviceUsedProducts);
+    }
+
+    if (!productList) {
+      return;
+    }
+
+    productList.innerHTML = "";
+
+    if (!serviceUsedProducts.length) {
+      const emptyState = document.createElement("div");
+      emptyState.className = "empty-state compact";
+      emptyState.textContent = "Aucun produit rattache.";
+      productList.appendChild(emptyState);
+      return;
+    }
+
+    serviceUsedProducts.forEach((entry) => {
+      const product = getProductById(entry.productId);
+      const item = document.createElement("article");
+      item.className = "selected-product-item";
+      item.innerHTML = `
+        <div>
+          <strong>${product?.name || "Produit supprime"}</strong>
+          <span>${entry.quantity} ${product?.unit || ""} par service</span>
+        </div>
+        <button type="button" class="secondary-button" data-product-id="${entry.productId}">Retirer</button>
+      `;
+      item.querySelector("button")?.addEventListener("click", () => {
+        serviceUsedProducts = serviceUsedProducts.filter(
+          (usedProduct) => usedProduct.productId !== entry.productId
+        );
+        renderServiceProductSelection();
+      });
+      productList.appendChild(item);
+    });
+  }
 
   if (count) {
     count.textContent = `${state.services.length} service(s)`;
   }
+
+  fillSelect(productSelect, state.products, (product) => ({
+    value: product.id,
+    label: `${product.name} (${product.stockOnHand} ${product.unit})`
+  }));
+  renderServiceProductSelection();
 
   renderList(
     $("#services-list"),
@@ -536,13 +637,41 @@ function setupServicesPage() {
     (service) =>
       createListItem(
         service.name,
-        `${service.category || "Divers"} • ${formatDate(
+        `${formatServiceUsedProducts(service.usedProducts || [])} • ${
+          service.info || "Aucune information"
+        } • ${formatDate(
           service.updatedAt || service.createdAt
         )}`,
         formatCurrency(service.basePrice)
       ),
     "Aucun service pour le moment."
   );
+
+  if (addProductButton && !addProductButton.dataset.bound) {
+    addProductButton.dataset.bound = "true";
+    addProductButton.addEventListener("click", () => {
+      const productId = String(productSelect?.value || "").trim();
+      const quantity = Number(productQuantityInput?.value || 0);
+
+      if (!productId || quantity <= 0) {
+        return;
+      }
+
+      const existingProduct = serviceUsedProducts.find(
+        (entry) => entry.productId === productId
+      );
+      if (existingProduct) {
+        existingProduct.quantity = quantity;
+      } else {
+        serviceUsedProducts = [...serviceUsedProducts, { productId, quantity }];
+      }
+
+      if (productQuantityInput) {
+        productQuantityInput.value = 1;
+      }
+      renderServiceProductSelection();
+    });
+  }
 
   if (form && !form.dataset.bound) {
     form.dataset.bound = "true";
@@ -553,6 +682,8 @@ function setupServicesPage() {
         await mutateData("/api/services", Object.fromEntries(new FormData(form).entries()));
         form.reset();
         form.basePrice.value = 0;
+        serviceUsedProducts = [];
+        renderServiceProductSelection();
         setStatus("Service ajoute");
       } catch (error) {
         setStatus(error.message, true);
@@ -608,6 +739,46 @@ function refreshSalesSelectors() {
   }
 }
 
+function getSelectedSaleSourceEntry() {
+  const mode = getActiveEntryMode();
+  const refId = $("#sale-ref-id")?.value;
+  const source = mode === "service" ? state.services : state.products;
+  return source.find((entry) => entry.id === refId);
+}
+
+function refreshSaleAmountFromSelection() {
+  const form = $("#sale-form");
+  const selectedEntry = getSelectedSaleSourceEntry();
+
+  if (!form || !selectedEntry) {
+    return;
+  }
+
+  const quantity = Math.max(0, Number(form.quantity?.value || 0));
+  const unitPrice =
+    getActiveEntryMode() === "service"
+      ? Number(selectedEntry.basePrice || 0)
+      : Number(selectedEntry.salePrice || 0);
+  form.amountPaid.value = roundClientAmount(quantity * unitPrice);
+}
+
+function getOperationDateInput() {
+  return $("#operation-date");
+}
+
+function getOperationDate() {
+  return getOperationDateInput()?.value || formatInputDate();
+}
+
+function resetOperationDate() {
+  const today = formatInputDate();
+  const operationDateInput = getOperationDateInput();
+
+  if (operationDateInput && !operationDateInput.value) {
+    operationDateInput.value = today;
+  }
+}
+
 function setEntryMode(mode, preserveEditing = false) {
   const salePane = $("#sale-pane");
   const expensePane = $("#expense-pane");
@@ -659,6 +830,9 @@ function setEntryMode(mode, preserveEditing = false) {
   }
 
   refreshSalesSelectors();
+  if (!preserveEditing) {
+    refreshSaleAmountFromSelection();
+  }
 
   if (title) {
     if (preserveEditing && saleEditingId) {
@@ -692,7 +866,6 @@ function clearSaleEditing(form) {
 
   form.reset();
   form.quantity.value = 1;
-  form.amountPaid.value = 0;
   $("#sale-submit-label").textContent = "Valider la vente";
   $("#sale-cancel-edit").hidden = true;
   setEntryMode("product");
@@ -707,11 +880,14 @@ function populateSaleForm(sale) {
   }
 
   saleEditingId = sale.id;
-  form.customerName.value = sale.customerName || "";
   form.quantity.value = item.quantity || 1;
   setEntryMode(item.kind, true);
   form.paymentMethod.value = sale.paymentMethod || "cash";
   form.amountPaid.value = sale.amountPaid || 0;
+  const operationDateInput = getOperationDateInput();
+  if (operationDateInput) {
+    operationDateInput.value = formatInputDate(sale.createdAt);
+  }
   form.refId.value = item.refId;
   $("#sale-submit-label").textContent = "Mettre a jour";
   $("#sale-form-title").textContent = `Modification ${sale.reference}`;
@@ -732,7 +908,7 @@ function createSaleCard(sale) {
     <div class="sale-card-head">
       <div>
         <strong>${sale.reference}</strong>
-        <p>${sale.customerName} • ${formatDate(sale.createdAt)}</p>
+        <p>${formatDate(sale.createdAt)}</p>
       </div>
       <span class="sale-badge">${badge}</span>
     </div>
@@ -787,6 +963,8 @@ function createExpenseCard(entry) {
   article.className = "sale-card";
 
   const badge = sameLocalDay(entry.createdAt) ? "Aujourd'hui" : "Anterieur";
+  const typeLabel =
+    entry.type === "stock_purchase" ? "Commande" : "Depense journaliere";
   article.innerHTML = `
     <div class="sale-card-head">
       <div>
@@ -796,7 +974,7 @@ function createExpenseCard(entry) {
       <span class="sale-badge">${badge}</span>
     </div>
     <div class="sale-card-body">
-      <p>Depense journaliere rattachee a la caisse</p>
+      <p>${typeLabel} rattachee a la caisse</p>
     </div>
     <div class="sale-card-foot">
       <strong>-${formatCurrency(entry.amount)}</strong>
@@ -809,44 +987,42 @@ function createExpenseCard(entry) {
 function renderSalesByFilter() {
   const list = $("#sales-list");
   const historyMode = getActiveHistoryMode();
-  const filter = document.querySelector("[data-sales-filter].is-active")?.dataset
-    .salesFilter;
-  const mode = filter || "today";
   const counter = $("#sales-counter");
   const title = $("#history-title");
+  const dateLabel = $("#sales-date-label");
+  const selectedDate = startOfLocalDay(salesHistoryDate);
 
   let entries = [];
   let emptyLabel = "Aucun element.";
 
+  if (dateLabel) {
+    dateLabel.textContent = formatDayLabel(selectedDate);
+  }
+
   if (historyMode === "expense") {
     const expenses = [...(state.cashEntries || [])]
-      .filter((entry) => entry.type === "expense")
+      .filter((entry) => ["expense", "stock_purchase"].includes(entry.type))
       .sort((left, right) => new Date(right.createdAt) - new Date(left.createdAt));
-    entries = expenses.filter((entry) =>
-      mode === "older" ? !sameLocalDay(entry.createdAt) : sameLocalDay(entry.createdAt)
+    entries = expenses.filter(
+      (entry) =>
+        startOfLocalDay(entry.createdAt).getTime() === selectedDate.getTime()
     );
-    emptyLabel =
-      mode === "older"
-        ? "Aucune depense anterieure pour le moment."
-        : "Aucune depense aujourd'hui pour le moment.";
+    emptyLabel = "Aucune depense ou commande pour cette date.";
     if (title) {
-      title.textContent = "Depenses journalieres";
+      title.textContent = "Depenses et commandes";
     }
   } else {
     const sales = [...state.sales]
       .filter((sale) => sale.items[0]?.kind === historyMode)
       .sort((left, right) => new Date(right.createdAt) - new Date(left.createdAt));
-    entries = sales.filter((sale) =>
-      mode === "older" ? !sameLocalDay(sale.createdAt) : sameLocalDay(sale.createdAt)
+    entries = sales.filter(
+      (sale) =>
+        startOfLocalDay(sale.createdAt).getTime() === selectedDate.getTime()
     );
     emptyLabel =
       historyMode === "service"
-        ? mode === "older"
-          ? "Aucune vente service anterieure pour le moment."
-          : "Aucune vente service aujourd'hui pour le moment."
-        : mode === "older"
-          ? "Aucune vente produit anterieure pour le moment."
-          : "Aucune vente produit aujourd'hui pour le moment.";
+        ? "Aucune vente service pour cette date."
+        : "Aucune vente produit pour cette date.";
     if (title) {
       title.textContent =
         historyMode === "service" ? "Ventes services" : "Ventes produits";
@@ -885,8 +1061,19 @@ function setupSalesPage() {
 
   refreshPaymentMethodSelects();
   refreshSalesSelectors();
+  resetOperationDate();
   setEntryMode(getActiveEntryMode());
   renderSalesByFilter();
+
+  const saleRefSelect = $("#sale-ref-id");
+  if (saleRefSelect && !saleRefSelect.dataset.boundAmountRefresh) {
+    saleRefSelect.dataset.boundAmountRefresh = "true";
+    saleRefSelect.addEventListener("change", refreshSaleAmountFromSelection);
+  }
+  if (form?.quantity && !form.quantity.dataset.boundAmountRefresh) {
+    form.quantity.dataset.boundAmountRefresh = "true";
+    form.quantity.addEventListener("input", refreshSaleAmountFromSelection);
+  }
 
   document.querySelectorAll("[data-entry-mode]").forEach((button) => {
     if (button.dataset.bound) {
@@ -917,17 +1104,17 @@ function setupSalesPage() {
     });
   });
 
-  document.querySelectorAll("[data-sales-filter]").forEach((button) => {
+  document.querySelectorAll("[data-sales-day]").forEach((button) => {
     if (button.dataset.bound) {
       return;
     }
 
     button.dataset.bound = "true";
     button.addEventListener("click", () => {
-      document
-        .querySelectorAll("[data-sales-filter]")
-        .forEach((entry) => entry.classList.remove("is-active"));
-      button.classList.add("is-active");
+      salesHistoryDate = addDays(
+        salesHistoryDate,
+        button.dataset.salesDay === "prev" ? -1 : 1
+      );
       renderSalesByFilter();
     });
   });
@@ -945,15 +1132,17 @@ function setupSalesPage() {
       try {
         const values = Object.fromEntries(new FormData(form).entries());
         const quantity = Number(values.quantity || 0);
+        const amountPaid = Number(values.amountPaid || 0);
+        const unitPrice = quantity > 0 ? amountPaid / quantity : 0;
         const entryMode = getActiveEntryMode();
         const payload = {
-          customerName: values.customerName,
           paymentMethod: values.paymentMethod,
-          amountPaid: Number(values.amountPaid || 0),
+          amountPaid,
+          operationDate: getOperationDate(),
           items: [
             entryMode === "service"
-              ? { kind: "service", serviceId: values.refId, quantity }
-              : { kind: "product", productId: values.refId, quantity }
+              ? { kind: "service", serviceId: values.refId, quantity, unitPrice }
+              : { kind: "product", productId: values.refId, quantity, unitPrice }
           ]
         };
 
@@ -966,6 +1155,7 @@ function setupSalesPage() {
         }
 
         clearSaleEditing(form);
+        resetOperationDate();
       } catch (error) {
         setStatus(error.message, true);
       }
@@ -978,12 +1168,15 @@ function setupSalesPage() {
       event.preventDefault();
 
       try {
+        const payload = Object.fromEntries(new FormData(expenseForm).entries());
+        payload.operationDate = getOperationDate();
         await mutateData(
           "/api/expenses",
-          Object.fromEntries(new FormData(expenseForm).entries())
+          payload
         );
         expenseForm.reset();
         expenseForm.amount.value = 0;
+        resetOperationDate();
         setStatus("Depense enregistree");
       } catch (error) {
         setStatus(error.message, true);
@@ -1366,7 +1559,7 @@ function renderTreasuryLists(totals) {
     (sale) =>
       createListItem(
         sale.reference,
-        `${sale.customerName} • ${sale.items.length} ligne(s) • marge ${formatCurrency(
+        `${sale.items.length} ligne(s) • marge ${formatCurrency(
           getSaleMargin(sale)
         )}`,
         formatCurrency(sale.subtotal)

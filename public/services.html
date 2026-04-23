@@ -56,13 +56,32 @@
                 Nom
                 <input type="text" name="name" placeholder="Photocopie A4 N&B" required />
               </label>
+              <div class="service-products-field">
+                <span>Produits utilises</span>
+                <div class="service-products-controls">
+                  <select id="service-product-id"></select>
+                  <input
+                    id="service-product-quantity"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    value="1"
+                    aria-label="Quantite utilisee"
+                  />
+                  <button type="button" class="secondary-button" data-action="add-service-product">
+                    Ajouter
+                  </button>
+                </div>
+                <input type="hidden" name="usedProducts" id="service-used-products" value="[]" />
+                <div id="service-products-list" class="selected-products-list"></div>
+              </div>
               <label>
-                Categorie
-                <input type="text" name="category" placeholder="Photocopie" />
+                Tarif de base ou prix de vente
+                <input type="number" name="basePrice" min="0" step="0.01" value="0" />
               </label>
               <label>
-                Tarif de base
-                <input type="number" name="basePrice" min="0" step="0.01" value="0" />
+                Information
+                <textarea name="info" placeholder="Details utiles pour ce service"></textarea>
               </label>
               <button type="submit">Ajouter le service</button>
             </form>

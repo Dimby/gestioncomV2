@@ -50,6 +50,11 @@
               </div>
             </div>
 
+            <label class="entry-operation-date">
+              Date d'operation
+              <input type="date" name="operationDate" id="operation-date" />
+            </label>
+
             <div class="entry-tabs" id="entry-mode-tabs" role="tablist" aria-label="Saisie vendeur">
               <button
                 type="button"
@@ -89,10 +94,6 @@
               >
                 <form id="sale-form" class="form-grid">
                   <label>
-                    Client
-                    <input type="text" name="customerName" placeholder="Client comptoir" />
-                  </label>
-                  <label>
                     <span id="sale-ref-label">Produit</span>
                     <select id="sale-ref-id" name="refId" required></select>
                   </label>
@@ -131,6 +132,13 @@
                   <label>
                     Libelle de la depense
                     <input type="text" name="label" placeholder="Transport, courant, achat urgent..." />
+                  </label>
+                  <label>
+                    Type
+                    <select name="expenseType" id="expense-type">
+                      <option value="expense">Depense courante</option>
+                      <option value="order">Commande</option>
+                    </select>
                   </label>
                   <label>
                     Montant
@@ -173,13 +181,26 @@
                     Depenses
                   </button>
                 </div>
-                <div class="segmented-controls">
-                <button type="button" class="filter-chip is-active" data-sales-filter="today">
-                  Aujourd'hui
-                </button>
-                <button type="button" class="filter-chip" data-sales-filter="older">
-                  Anterieur
-                </button>
+                <div class="date-navigator" aria-label="Navigation des jours">
+                  <button
+                    type="button"
+                    class="icon-button"
+                    data-sales-day="prev"
+                    aria-label="Jour precedent"
+                    title="Jour precedent"
+                  >
+                    &lt;
+                  </button>
+                  <strong id="sales-date-label">Aujourd'hui</strong>
+                  <button
+                    type="button"
+                    class="icon-button"
+                    data-sales-day="next"
+                    aria-label="Jour suivant"
+                    title="Jour suivant"
+                  >
+                    &gt;
+                  </button>
                 </div>
               </div>
             </div>
