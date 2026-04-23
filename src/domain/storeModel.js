@@ -178,6 +178,7 @@ function normalizeProduct(rawProduct = {}) {
     sku: String(rawProduct.sku || "").trim(),
     name: String(rawProduct.name || "").trim(),
     category: normalizeProductCategory(rawProduct.category),
+    supplier: String(rawProduct.supplier || rawProduct.provider || "").trim(),
     unit: String(rawProduct.unit || "piece").trim() || "piece",
     salePrice: roundAmount(rawProduct.salePrice ?? rawProduct.unitPrice ?? 0),
     costPrice,

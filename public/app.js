@@ -66,6 +66,10 @@ function formatProductCategory(value) {
   return productCategoryLabels[value] || value || "FOURNITURE SCOLAIRE";
 }
 
+function formatSupplier(value) {
+  return String(value || "").trim() || "Fournisseur non renseigne";
+}
+
 function sameLocalDay(value) {
   const current = new Date();
   const target = new Date(value);
@@ -375,7 +379,9 @@ function renderDashboard() {
     (product) =>
       createListItem(
         product.name,
-        `${formatProductCategory(product.category)} • ${product.stockOnHand} ${product.unit} restant(s)`,
+        `${formatProductCategory(product.category)} • ${formatSupplier(
+          product.supplier
+        )} • ${product.stockOnHand} ${product.unit} restant(s)`,
         `Seuil ${product.reorderLevel}`
       ),
     "Aucun produit sous seuil."
@@ -440,7 +446,9 @@ function setupProductsPage() {
     (product) =>
       createListItem(
         product.name,
-        `${formatProductCategory(product.category)} • ${product.stockOnHand} ${product.unit} • seuil ${product.reorderLevel}`,
+        `${formatProductCategory(product.category)} • ${formatSupplier(
+          product.supplier
+        )} • ${product.stockOnHand} ${product.unit} • seuil ${product.reorderLevel}`,
         `${formatCurrency(product.salePrice)} • ${formatCurrency(product.costPrice)} • ${formatCurrency(product.purchaseTotalPrice)}`
       ),
     "Aucun produit pour le moment."
