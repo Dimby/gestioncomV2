@@ -1019,6 +1019,7 @@ function renderSalesByFilter() {
       (sale) =>
         startOfLocalDay(sale.createdAt).getTime() === selectedDate.getTime()
     );
+
     emptyLabel =
       historyMode === "service"
         ? "Aucune vente service pour cette date."
@@ -1249,24 +1250,21 @@ function moveTreasuryPeriod(direction) {
     return;
   }
 
-  const periods = getMonthWeekPeriods(treasuryState.selectedDate);
   const currentPeriod = getMonthWeekPeriodForDate(treasuryState.selectedDate);
-  const currentIndex = periods.findIndex(
-    (period) => period.start.getTime() === currentPeriod.start.getTime()
-  );
-  const nextIndex = Math.min(
-    Math.max(currentIndex + direction, 0),
-    periods.length - 1
-  );
-
-  treasuryState.selectedDate = periods[nextIndex].start;
+  treasuryState.selectedDate =
+    direction > 0 ? addDays(currentPeriod.end, 1) : addDays(currentPeriod.start, -1);
 }
 
 function getSaleMargin(sale) {
   return roundClientAmount(
     (sale.items || []).reduce(
       (sum, item) =>
-        sum + Number(item.total || 0) - Number(item.costPriceSnapshot || 0) * Number(item.quantity || 0),
+        sum +
+        Math.max(
+          0,
+          Number(item.total || 0) -
+            Number(item.costPriceSnapshot || 0) * Number(item.quantity || 0)
+        ),
       0
     )
   );
@@ -1303,7 +1301,7 @@ function getTreasuryTotals(start, end) {
   const expensesTotal = roundClientAmount(
     currentExpenses.reduce((sum, entry) => sum + Number(entry.amount || 0), 0)
   );
-  const stockPurchasesTotal = roundClientAmount(
+  const ordersTotal = roundClientAmount(
     periodCashEntries
       .filter((entry) => entry.type === "stock_purchase")
       .reduce((sum, entry) => sum + Number(entry.amount || 0), 0)
@@ -1318,7 +1316,7 @@ function getTreasuryTotals(start, end) {
     reportBeforePeriod,
     salesTotal,
     expensesTotal,
-    stockPurchasesTotal,
+    ordersTotal,
     grossMargin,
     netProfit: roundClientAmount(grossMargin - expensesTotal),
     endingBalance: roundClientAmount(reportBeforePeriod + periodCashFlow)
@@ -1353,6 +1351,11 @@ function getTreasuryDayRows(start, end) {
         .filter((entry) => entry.type === "expense")
         .reduce((sum, entry) => sum + Number(entry.amount || 0), 0)
     );
+    const ordersTotal = roundClientAmount(
+      cashEntries
+        .filter((entry) => entry.type === "stock_purchase")
+        .reduce((sum, entry) => sum + Number(entry.amount || 0), 0)
+    );
     const grossMargin = roundClientAmount(
       sales.reduce((sum, sale) => sum + getSaleMargin(sale), 0)
     );
@@ -1366,7 +1369,9 @@ function getTreasuryDayRows(start, end) {
       report,
       salesTotal,
       expensesTotal,
+      ordersTotal,
       grossMargin,
+      netProfit: roundClientAmount(grossMargin - expensesTotal),
       endingBalance
     });
     report = endingBalance;
@@ -1405,6 +1410,11 @@ function getTreasuryWeekRows(start, end) {
         .filter((entry) => entry.type === "expense")
         .reduce((sum, entry) => sum + Number(entry.amount || 0), 0)
     );
+    const ordersTotal = roundClientAmount(
+      cashEntries
+        .filter((entry) => entry.type === "stock_purchase")
+        .reduce((sum, entry) => sum + Number(entry.amount || 0), 0)
+    );
     const grossMargin = roundClientAmount(
       sales.reduce((sum, sale) => sum + getSaleMargin(sale), 0)
     );
@@ -1419,7 +1429,9 @@ function getTreasuryWeekRows(start, end) {
       report,
       salesTotal,
       expensesTotal,
+      ordersTotal,
       grossMargin,
+      netProfit: roundClientAmount(grossMargin - expensesTotal),
       endingBalance
     });
     report = endingBalance;
@@ -1460,17 +1472,22 @@ function renderTreasuryStats(totals) {
     {
       label: "Depenses courantes",
       value: formatCurrency(totals.expensesTotal),
-      hint: "Hors approvisionnements stock"
+      hint: "Retirees du benefice"
+    },
+    {
+      label: "Commandes",
+      value: formatCurrency(totals.ordersTotal),
+      hint: "Affichees a part du benefice"
     },
     {
       label: "Benefice net",
       value: formatCurrency(totals.netProfit),
-      hint: "Marge brute moins depenses"
+      hint: "Marge brute moins depenses courantes"
     },
     {
       label: "Solde fin periode",
       value: formatCurrency(totals.endingBalance),
-      hint: `Achats stock: ${formatCurrency(totals.stockPurchasesTotal)}`
+      hint: `Commandes: ${formatCurrency(totals.ordersTotal)}`
     }
   ];
 
@@ -1507,15 +1524,17 @@ function renderTreasuryRows(rows) {
       formatCurrency(row.report),
       formatCurrency(row.salesTotal),
       `-${formatCurrency(row.expensesTotal)}`,
+      `-${formatCurrency(row.ordersTotal)}`,
       formatCurrency(row.grossMargin),
+      formatCurrency(row.netProfit),
       formatCurrency(row.endingBalance)
     ].forEach((value, index) => {
       const cell = document.createElement(index === 0 ? "th" : "td");
       cell.textContent = value;
-      if (index === 2 || index === 4) {
+      if (index === 2 || index === 5 || index === 6) {
         cell.className = "amount-positive";
       }
-      if (index === 3) {
+      if (index === 3 || index === 4) {
         cell.className = "amount-negative";
       }
       tr.appendChild(cell);
@@ -1578,11 +1597,6 @@ function renderTreasuryPage() {
   const firstColumn = $("#treasury-period-column");
   const prevButton = $("[data-treasury-month='prev']");
   const nextButton = $("[data-treasury-month='next']");
-  const monthWeekPeriods = getMonthWeekPeriods(treasuryState.selectedDate);
-  const currentMonthWeek = getMonthWeekPeriodForDate(treasuryState.selectedDate);
-  const currentMonthWeekIndex = monthWeekPeriods.findIndex(
-    (entry) => entry.start.getTime() === currentMonthWeek.start.getTime()
-  );
 
   if (periodLabel) {
     periodLabel.textContent = period.label;
@@ -1595,7 +1609,7 @@ function renderTreasuryPage() {
     daysCopy.textContent =
       treasuryState.view === "month"
         ? "Chaque ligne regroupe les mouvements d'une semaine du mois selectionne."
-        : "Les depenses courantes sont retirees du solde journalier.";
+        : "Le benefice journalier retire seulement les depenses courantes. Les commandes sont affichees a part.";
   }
   if (firstColumn) {
     firstColumn.textContent = treasuryState.view === "month" ? "Semaine" : "Jour";
@@ -1609,8 +1623,7 @@ function renderTreasuryPage() {
       "title",
       treasuryState.view === "month" ? "Mois precedent" : "Semaine precedente"
     );
-    prevButton.disabled =
-      treasuryState.view === "week" && currentMonthWeekIndex <= 0;
+    prevButton.disabled = false;
   }
   if (nextButton) {
     nextButton.setAttribute(
@@ -1621,9 +1634,7 @@ function renderTreasuryPage() {
       "title",
       treasuryState.view === "month" ? "Mois suivant" : "Semaine suivante"
     );
-    nextButton.disabled =
-      treasuryState.view === "week" &&
-      currentMonthWeekIndex >= monthWeekPeriods.length - 1;
+    nextButton.disabled = false;
   }
 
   document.querySelectorAll("[data-treasury-view]").forEach((button) => {

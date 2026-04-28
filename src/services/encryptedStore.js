@@ -8,6 +8,20 @@ const IV_LENGTH = 16;
 const SALT_LENGTH = 16;
 const TAG_LENGTH = 16;
 
+function getPrettyJsonPath(filePath) {
+  return filePath.endsWith(".enc")
+    ? filePath.replace(/\.enc$/i, ".json")
+    : `${filePath}.json`;
+}
+
+async function writePrettyStore(filePath, data) {
+  await fs.writeFile(
+    getPrettyJsonPath(filePath),
+    `${JSON.stringify(data, null, 2)}\n`,
+    "utf8"
+  );
+}
+
 function defaultStore() {
   return createDefaultStore();
 }
@@ -56,7 +70,9 @@ async function ensureStore(filePath, secret) {
 async function readStore(filePath, secret) {
   await ensureStore(filePath, secret);
   const rawValue = await fs.readFile(filePath, "utf8");
-  return normalizeStore(decryptJson(rawValue, secret));
+  const normalizedData = normalizeStore(decryptJson(rawValue, secret));
+  await writePrettyStore(filePath, normalizedData);
+  return normalizedData;
 }
 
 async function writeStore(filePath, secret, data) {
@@ -72,6 +88,7 @@ async function writeStore(filePath, secret, data) {
   };
   const encrypted = encryptJson(nextData, secret);
   await fs.writeFile(filePath, encrypted, "utf8");
+  await writePrettyStore(filePath, nextData);
   return nextData;
 }
 
