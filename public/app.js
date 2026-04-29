@@ -974,19 +974,18 @@ function createSaleCard(sale) {
   article.innerHTML = `
     <div class="sale-card-head">
       <div>
-        <strong>${sale.reference}</strong>
+        <strong>${item?.label}</strong>
         <p>${formatDate(sale.createdAt)}</p>
       </div>
       <span class="sale-badge">${badge}</span>
     </div>
     <div class="sale-card-body">
-      <p>${item?.label || "Ligne"} • ${item?.quantity || 0} ${item?.unit || ""}</p>
-      <p>Paiement ${sale.paymentMethod} • encaisse ${formatCurrency(
-        sale.amountPaid
+      <p>${sale.reference || "Ligne"} • ${item?.quantity || 0} ${item?.unit || ""} • Paiement ${sale.paymentMethod} • encaisse ${formatCurrency(
+        sale.subtotal
       )} • reste ${formatCurrency(sale.balanceDue)}</p>
     </div>
     <div class="sale-card-foot">
-      <strong>${formatCurrency(sale.subtotal)}</strong>
+      <strong>${formatCurrency(sale.amountPaid)}</strong>
       <div class="sale-actions">
         <button type="button" class="secondary-button" data-action="edit-sale">Modifier</button>
         <button type="button" class="danger-button" data-action="delete-sale">Supprimer</button>
@@ -1484,7 +1483,7 @@ function getReportBeforePeriod(start) {
 }
 
 function getSalesTotal(sales) {
-  return roundClientAmount(sales.reduce((sum, sale) => sum + Number(sale.subtotal || 0), 0));
+  return roundClientAmount(sales.reduce((sum, sale) => sum + Number(sale.amountPaid || 0), 0));
 }
 
 function getExpensesTotal(cashEntries) {
