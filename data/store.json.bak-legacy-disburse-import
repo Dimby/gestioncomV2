@@ -2,7 +2,7 @@
   "meta": {
     "version": 3,
     "createdAt": "2026-04-15T17:03:32.030Z",
-    "updatedAt": "2026-04-28T16:01:04.301Z"
+    "updatedAt": "2026-04-28T15:33:31.571Z"
   },
   "settings": {
     "businessName": "GestionComV2",
@@ -62856,126 +62856,6 @@
       "label": "Encaissement LEG-1760467437186",
       "referenceId": "legacy-sale-1760467437186",
       "createdAt": "2025-10-14T18:43:57.186Z"
-    },
-    {
-      "id": "legacy-order-0-2025-11-29T05:47:01.496Z-140000",
-      "type": "stock_purchase",
-      "direction": "out",
-      "amount": 140000,
-      "paymentMethod": "cash",
-      "label": "VERSESMENT",
-      "referenceId": null,
-      "createdAt": "2025-11-29T05:47:01.496Z"
-    },
-    {
-      "id": "legacy-order-1-2025-12-09T21:02:53.976Z-79100",
-      "type": "stock_purchase",
-      "direction": "out",
-      "amount": 79100,
-      "paymentMethod": "cash",
-      "label": "depot",
-      "referenceId": null,
-      "createdAt": "2025-12-09T21:02:53.976Z"
-    },
-    {
-      "id": "legacy-order-2-2025-12-09T21:02:54.023Z-79100",
-      "type": "stock_purchase",
-      "direction": "out",
-      "amount": 79100,
-      "paymentMethod": "cash",
-      "label": "depot",
-      "referenceId": null,
-      "createdAt": "2025-12-09T21:02:54.023Z"
-    },
-    {
-      "id": "legacy-order-3-2025-12-13T21:14:29.976Z-84300",
-      "type": "stock_purchase",
-      "direction": "out",
-      "amount": 84300,
-      "paymentMethod": "cash",
-      "label": "depot",
-      "referenceId": null,
-      "createdAt": "2025-12-13T21:14:29.976Z"
-    },
-    {
-      "id": "legacy-order-4-2025-12-31T20:58:17.016Z-33700",
-      "type": "stock_purchase",
-      "direction": "out",
-      "amount": 33700,
-      "paymentMethod": "cash",
-      "label": "AVANCE",
-      "referenceId": null,
-      "createdAt": "2025-12-31T20:58:17.016Z"
-    },
-    {
-      "id": "legacy-order-5-2026-02-09T05:03:04.000Z-209100",
-      "type": "stock_purchase",
-      "direction": "out",
-      "amount": 209100,
-      "paymentMethod": "cash",
-      "label": "Vola nalefa Mandimby 130 000 + 70 000 + Frais",
-      "referenceId": null,
-      "createdAt": "2026-02-09T05:03:04.000Z"
-    },
-    {
-      "id": "legacy-order-6-2026-02-25T08:32:58.000Z-125300",
-      "type": "stock_purchase",
-      "direction": "out",
-      "amount": 125300,
-      "paymentMethod": "cash",
-      "label": "vola nalefa 1 (120 000 + 5300 frais)",
-      "referenceId": null,
-      "createdAt": "2026-02-25T08:32:58.000Z"
-    },
-    {
-      "id": "legacy-order-7-2026-02-25T08:32:58.000Z-46300",
-      "type": "stock_purchase",
-      "direction": "out",
-      "amount": 46300,
-      "paymentMethod": "cash",
-      "label": "vola nalefa 2 (45 000 + 1300frais)",
-      "referenceId": null,
-      "createdAt": "2026-02-25T08:32:58.000Z"
-    },
-    {
-      "id": "legacy-order-8-2026-03-20T17:15:26.000Z-266600",
-      "type": "stock_purchase",
-      "direction": "out",
-      "amount": 266600,
-      "paymentMethod": "cash",
-      "label": "Commande",
-      "referenceId": null,
-      "createdAt": "2026-03-20T17:15:26.000Z"
-    },
-    {
-      "id": "legacy-order-9-2026-03-26T16:30:42.000Z-100400",
-      "type": "stock_purchase",
-      "direction": "out",
-      "amount": 100400,
-      "paymentMethod": "cash",
-      "label": "Vola nalefa voalohany (97500+2900)",
-      "referenceId": null,
-      "createdAt": "2026-03-26T16:30:42.000Z"
-    },
-    {
-      "id": "legacy-order-10-2026-03-26T16:30:42.000Z-41800",
-      "type": "stock_purchase",
-      "direction": "out",
-      "amount": 41800,
-      "paymentMethod": "cash",
-      "label": "vola nalefa faharoa ( 40000+1800)",
-      "referenceId": null,
-      "createdAt": "2026-03-26T16:30:42.000Z"
-    },
-    {
-      "id": "legacy-order-11-2026-04-15T04:32:50.000Z-185300",
-      "type": "stock_purchase",
-      "direction": "out",
-      "amount": 185300,
-      "paymentMethod": "cash",
-      "label": "Vola nalefa Mandimby + Frais 5300",
-      "referenceId": null,
-      "createdAt": "2026-04-15T04:32:50.000Z"
     }
   ],
   "activityLog": [

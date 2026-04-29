@@ -44,6 +44,16 @@ const productCategoryLabels = {
   notepad: "BLOCNOTE (Bloc-note)",
   supplies: "FOURNITURE SCOLAIRE"
 };
+const adminSidebarLinks = [
+  { href: "/index.html", label: "Tableau de bord", page: "dashboard" },
+  { href: "/produits.html", label: "Produits", page: "products" },
+  { href: "/approvisionnement.html", label: "Approvisionnement", page: "stock" },
+  { href: "/services.html", label: "Services", page: "services" },
+  { href: "/ventes.html", label: "Ventes", page: "sales" },
+  { href: "/activite.html", label: "Activite", page: "activity" },
+  { href: "/tresorerie.html", label: "Trésorerie", page: "treasury" },
+  { href: "/chat-ia.html", label: "Chat avec IA", page: "assistant" }
+];
 
 function $(selector) {
   return document.querySelector(selector);
@@ -119,6 +129,14 @@ function formatServiceUsedProducts(usedProducts = []) {
       return `${product?.name || "Produit supprime"} x ${entry.quantity}`;
     })
     .join(", ");
+}
+
+function isServiceSaleKind(kind) {
+  return String(kind || "").trim() === "service";
+}
+
+function isProductSaleKind(kind) {
+  return !isServiceSaleKind(kind);
 }
 
 function sameLocalDay(value) {
@@ -235,6 +253,53 @@ function createListItem(title, subtitle, trailing) {
   node.querySelector("p").textContent = subtitle;
   node.querySelector("strong").textContent = trailing;
   return node;
+}
+
+function renderSidebar() {
+  const sidebar = document.querySelector(".sidebar");
+  if (!sidebar || page === "login") {
+    return;
+  }
+
+  if (pageRole === "admin") {
+    const links = adminSidebarLinks
+      .map(
+        (link) =>
+          `<a class="nav-link${link.page === page ? " is-active" : ""}" href="${link.href}">${link.label}</a>`
+      )
+      .join("");
+
+    sidebar.innerHTML = `
+      <nav class="nav-links">
+        ${links}
+        <button class="nav-link nav-button" type="button" data-action="admin-logout">
+          Deconnexion admin
+        </button>
+      </nav>
+      <div class="brand-block">
+        <p class="eyebrow">Multiservice</p>
+        <h1>GestionComV2</h1>
+        <p class="brand-copy">Stock, prestations et caisse locale.</p>
+      </div>
+    `;
+    return;
+  }
+
+  sidebar.innerHTML = `
+    <div class="brand-block">
+      <p class="eyebrow">Espace vendeur</p>
+      <h1>GestionComV2</h1>
+      <p class="brand-copy">Saisie libre des ventes et consultation du journal de caisse.</p>
+    </div>
+    <nav class="nav-links">
+      <a class="nav-link${page === "sales" ? " is-active" : ""}" href="/ventes.html">Ventes</a>
+      <a class="nav-link" href="/admin-login.html" data-auth-role="seller">Connexion admin</a>
+      <a class="nav-link" href="/index.html" data-auth-role="admin" hidden>Tableau de bord admin</a>
+      <button class="nav-link nav-button" type="button" data-action="admin-logout" data-auth-role="admin" hidden>
+        Deconnexion admin
+      </button>
+    </nav>
+  `;
 }
 
 function renderList(container, entries, mapper, emptyLabel) {
@@ -356,6 +421,8 @@ async function mutateData(endpoint, payload, method = "POST") {
 }
 
 function setupChrome() {
+  renderSidebar();
+
   document.querySelectorAll("[data-auth-role]").forEach((element) => {
     const expected = element.dataset.authRole;
     element.hidden = expected !== (state.auth?.authenticated ? "admin" : "seller");
@@ -984,6 +1051,94 @@ function createExpenseCard(entry) {
   return article;
 }
 
+function getDailySalesEntries(targetDate) {
+  const selectedDate = startOfLocalDay(targetDate);
+  return [...(state.sales || [])].filter(
+    (sale) => startOfLocalDay(sale.createdAt).getTime() === selectedDate.getTime()
+  );
+}
+
+function getDailyCashEntries(targetDate) {
+  const selectedDate = startOfLocalDay(targetDate);
+  return [...(state.cashEntries || [])].filter(
+    (entry) => startOfLocalDay(entry.createdAt).getTime() === selectedDate.getTime()
+  );
+}
+
+function getSalesTotalByKind(sales, kind) {
+  return roundClientAmount(
+    sales
+      .filter((sale) =>
+        kind === "service"
+          ? isServiceSaleKind(sale.items[0]?.kind)
+          : isProductSaleKind(sale.items[0]?.kind)
+      )
+      .reduce((sum, sale) => sum + Number(sale.subtotal || 0), 0)
+  );
+}
+
+function renderSellerDailyStats() {
+  const statsGrid = $("#sales-kpi-grid");
+  if (!statsGrid) {
+    return;
+  }
+
+  const selectedDate = startOfLocalDay(salesHistoryDate);
+  const dailySales = getDailySalesEntries(selectedDate);
+  const dailyCashEntries = getDailyCashEntries(selectedDate);
+  const productSalesTotal = getSalesTotalByKind(dailySales, "product");
+  const serviceSalesTotal = getSalesTotalByKind(dailySales, "service");
+  const expensesTotal = getExpensesTotal(dailyCashEntries);
+  const ordersTotal = getOrdersTotal(dailyCashEntries);
+  const grossProfit = getGrossProfitTotal(dailySales);
+  const dailyProfit = grossProfit;
+  const cashBalance = getTreasuryEndingBalance(
+    getReportBeforePeriod(selectedDate),
+    productSalesTotal + serviceSalesTotal,
+    expensesTotal,
+    ordersTotal
+  );
+  const stats = [
+    {
+      label: "Ventes produits",
+      value: formatCurrency(productSalesTotal),
+      hint: `${dailySales.filter((sale) => isProductSaleKind(sale.items[0]?.kind)).length} vente(s)`
+    },
+    {
+      label: "Ventes services",
+      value: formatCurrency(serviceSalesTotal),
+      hint: `${dailySales.filter((sale) => isServiceSaleKind(sale.items[0]?.kind)).length} vente(s)`
+    },
+    {
+      label: "Depenses",
+      value: formatCurrency(expensesTotal + ordersTotal),
+      hint: `Courantes ${formatCurrency(expensesTotal)} • Commandes ${formatCurrency(ordersTotal)}`
+    },
+    {
+      label: "Benefice journalier",
+      value: formatCurrency(dailyProfit),
+      hint: "Calcule uniquement a partir des ventes"
+    },
+    {
+      label: "Caisse",
+      value: formatCurrency(cashBalance),
+      hint: `Solde du ${formatInputDate(selectedDate)}`
+    }
+  ];
+
+  statsGrid.innerHTML = stats
+    .map(
+      (stat) => `
+        <article class="stat-card compact">
+          <span>${stat.label}</span>
+          <strong>${stat.value}</strong>
+          <small>${stat.hint}</small>
+        </article>
+      `
+    )
+    .join("");
+}
+
 function renderSalesByFilter() {
   const list = $("#sales-list");
   const historyMode = getActiveHistoryMode();
@@ -999,6 +1154,8 @@ function renderSalesByFilter() {
     dateLabel.textContent = formatDayLabel(selectedDate);
   }
 
+  renderSellerDailyStats();
+
   if (historyMode === "expense") {
     const expenses = [...(state.cashEntries || [])]
       .filter((entry) => ["expense", "stock_purchase"].includes(entry.type))
@@ -1013,7 +1170,11 @@ function renderSalesByFilter() {
     }
   } else {
     const sales = [...state.sales]
-      .filter((sale) => sale.items[0]?.kind === historyMode)
+      .filter((sale) =>
+        historyMode === "service"
+          ? isServiceSaleKind(sale.items[0]?.kind)
+          : isProductSaleKind(sale.items[0]?.kind)
+      )
       .sort((left, right) => new Date(right.createdAt) - new Date(left.createdAt));
     entries = sales.filter(
       (sale) =>
@@ -1055,15 +1216,35 @@ function renderSalesByFilter() {
   });
 }
 
+function updateSalesDateLabel() {
+  const dateLabel = $("#sales-date-label");
+  const datePicker = $("#sales-date-picker");
+
+  if (!dateLabel) return;
+
+  const today = startOfLocalDay(new Date());
+  const isToday = salesHistoryDate.getTime() === today.getTime();
+
+  dateLabel.textContent = formatDayLabel(salesHistoryDate);
+  dateLabel.classList.toggle("custom-date", !isToday);
+
+  if (datePicker) {
+    datePicker.value = formatInputDate(salesHistoryDate);
+  }
+}
+
 function setupSalesPage() {
   const form = $("#sale-form");
   const expenseForm = $("#expense-form");
   const cancelEditButton = $("#sale-cancel-edit");
+  const datePicker = $("#sales-date-picker");
 
   refreshPaymentMethodSelects();
   refreshSalesSelectors();
   resetOperationDate();
   setEntryMode(getActiveEntryMode());
+
+  updateSalesDateLabel();
   renderSalesByFilter();
 
   const saleRefSelect = $("#sale-ref-id");
@@ -1116,9 +1297,24 @@ function setupSalesPage() {
         salesHistoryDate,
         button.dataset.salesDay === "prev" ? -1 : 1
       );
+      updateSalesDateLabel();
       renderSalesByFilter();
     });
   });
+
+  if (datePicker && !datePicker.dataset.bound) {
+    datePicker.dataset.bound = "true";
+    datePicker.addEventListener("change", (event) => {
+      const selectedDateString = event.target.value;
+      if (!selectedDateString) return;
+
+      const [year, month, day] = selectedDateString.split("-").map(Number);
+      salesHistoryDate = new Date(year, month - 1, day);
+
+      updateSalesDateLabel();
+      renderSalesByFilter();
+    });
+  }
 
   if (cancelEditButton && !cancelEditButton.dataset.bound) {
     cancelEditButton.dataset.bound = "true";
@@ -1255,14 +1451,14 @@ function moveTreasuryPeriod(direction) {
     direction > 0 ? addDays(currentPeriod.end, 1) : addDays(currentPeriod.start, -1);
 }
 
-function getSaleMargin(sale) {
+function getSaleGrossProfit(sale) {
   return roundClientAmount(
     (sale.items || []).reduce(
       (sum, item) =>
         sum +
         Math.max(
           0,
-          Number(item.total || 0) -
+          Number(item.unitPrice || 0) * Number(item.quantity || 0) -
             Number(item.costPriceSnapshot || 0) * Number(item.quantity || 0)
         ),
       0
@@ -1279,6 +1475,42 @@ function getCashEntrySignedAmount(entry) {
   return entry.direction === "out" ? -Number(entry.amount || 0) : Number(entry.amount || 0);
 }
 
+function getReportBeforePeriod(start) {
+  return roundClientAmount(
+    (state.cashEntries || [])
+      .filter((entry) => new Date(entry.createdAt).getTime() < start.getTime())
+      .reduce((sum, entry) => sum + getCashEntrySignedAmount(entry), 0)
+  );
+}
+
+function getSalesTotal(sales) {
+  return roundClientAmount(sales.reduce((sum, sale) => sum + Number(sale.subtotal || 0), 0));
+}
+
+function getExpensesTotal(cashEntries) {
+  return roundClientAmount(
+    cashEntries
+      .filter((entry) => entry.type === "expense")
+      .reduce((sum, entry) => sum + Number(entry.amount || 0), 0)
+  );
+}
+
+function getOrdersTotal(cashEntries) {
+  return roundClientAmount(
+    cashEntries
+      .filter((entry) => entry.type === "stock_purchase")
+      .reduce((sum, entry) => sum + Number(entry.amount || 0), 0)
+  );
+}
+
+function getGrossProfitTotal(sales) {
+  return roundClientAmount(sales.reduce((sum, sale) => sum + getSaleGrossProfit(sale), 0));
+}
+
+function getTreasuryEndingBalance(report, salesTotal, expensesTotal, ordersTotal) {
+  return roundClientAmount(report + salesTotal - expensesTotal - ordersTotal);
+}
+
 function getTreasuryTotals(start, end) {
   const periodSales = (state.sales || []).filter((sale) =>
     isBetweenDates(sale.createdAt, start, end)
@@ -1286,29 +1518,11 @@ function getTreasuryTotals(start, end) {
   const periodCashEntries = (state.cashEntries || []).filter((entry) =>
     isBetweenDates(entry.createdAt, start, end)
   );
-  const currentExpenses = periodCashEntries.filter((entry) => entry.type === "expense");
-  const reportBeforePeriod = roundClientAmount(
-    (state.cashEntries || [])
-      .filter((entry) => new Date(entry.createdAt).getTime() < start.getTime())
-      .reduce((sum, entry) => sum + getCashEntrySignedAmount(entry), 0)
-  );
-  const periodCashFlow = roundClientAmount(
-    periodCashEntries.reduce((sum, entry) => sum + getCashEntrySignedAmount(entry), 0)
-  );
-  const salesTotal = roundClientAmount(
-    periodSales.reduce((sum, sale) => sum + Number(sale.subtotal || 0), 0)
-  );
-  const expensesTotal = roundClientAmount(
-    currentExpenses.reduce((sum, entry) => sum + Number(entry.amount || 0), 0)
-  );
-  const ordersTotal = roundClientAmount(
-    periodCashEntries
-      .filter((entry) => entry.type === "stock_purchase")
-      .reduce((sum, entry) => sum + Number(entry.amount || 0), 0)
-  );
-  const grossMargin = roundClientAmount(
-    periodSales.reduce((sum, sale) => sum + getSaleMargin(sale), 0)
-  );
+  const reportBeforePeriod = getReportBeforePeriod(start);
+  const salesTotal = getSalesTotal(periodSales);
+  const expensesTotal = getExpensesTotal(periodCashEntries);
+  const ordersTotal = getOrdersTotal(periodCashEntries);
+  const grossProfit = getGrossProfitTotal(periodSales);
 
   return {
     periodSales,
@@ -1317,19 +1531,20 @@ function getTreasuryTotals(start, end) {
     salesTotal,
     expensesTotal,
     ordersTotal,
-    grossMargin,
-    netProfit: roundClientAmount(grossMargin - expensesTotal),
-    endingBalance: roundClientAmount(reportBeforePeriod + periodCashFlow)
+    grossProfit,
+    netProfit: grossProfit,
+    endingBalance: getTreasuryEndingBalance(
+      reportBeforePeriod,
+      salesTotal,
+      expensesTotal,
+      ordersTotal
+    )
   };
 }
 
 function getTreasuryDayRows(start, end) {
   const rows = [];
-  let report = roundClientAmount(
-    (state.cashEntries || [])
-      .filter((entry) => new Date(entry.createdAt).getTime() < start.getTime())
-      .reduce((sum, entry) => sum + getCashEntrySignedAmount(entry), 0)
-  );
+  let report = getReportBeforePeriod(start);
 
   for (let day = startOfLocalDay(start); day.getTime() <= end.getTime(); day = addDays(day, 1)) {
     const dayEnd = addDays(day, 1);
@@ -1343,26 +1558,16 @@ function getTreasuryDayRows(start, end) {
         new Date(entry.createdAt).getTime() >= day.getTime() &&
         new Date(entry.createdAt).getTime() < dayEnd.getTime()
     );
-    const salesTotal = roundClientAmount(
-      sales.reduce((sum, sale) => sum + Number(sale.subtotal || 0), 0)
+    const salesTotal = getSalesTotal(sales);
+    const expensesTotal = getExpensesTotal(cashEntries);
+    const ordersTotal = getOrdersTotal(cashEntries);
+    const grossProfit = getGrossProfitTotal(sales);
+    const endingBalance = getTreasuryEndingBalance(
+      report,
+      salesTotal,
+      expensesTotal,
+      ordersTotal
     );
-    const expensesTotal = roundClientAmount(
-      cashEntries
-        .filter((entry) => entry.type === "expense")
-        .reduce((sum, entry) => sum + Number(entry.amount || 0), 0)
-    );
-    const ordersTotal = roundClientAmount(
-      cashEntries
-        .filter((entry) => entry.type === "stock_purchase")
-        .reduce((sum, entry) => sum + Number(entry.amount || 0), 0)
-    );
-    const grossMargin = roundClientAmount(
-      sales.reduce((sum, sale) => sum + getSaleMargin(sale), 0)
-    );
-    const cashFlow = roundClientAmount(
-      cashEntries.reduce((sum, entry) => sum + getCashEntrySignedAmount(entry), 0)
-    );
-    const endingBalance = roundClientAmount(report + cashFlow);
 
     rows.push({
       date: day,
@@ -1370,8 +1575,8 @@ function getTreasuryDayRows(start, end) {
       salesTotal,
       expensesTotal,
       ordersTotal,
-      grossMargin,
-      netProfit: roundClientAmount(grossMargin - expensesTotal),
+      grossProfit,
+      netProfit: grossProfit,
       endingBalance
     });
     report = endingBalance;
@@ -1382,11 +1587,7 @@ function getTreasuryDayRows(start, end) {
 
 function getTreasuryWeekRows(start, end) {
   const rows = [];
-  let report = roundClientAmount(
-    (state.cashEntries || [])
-      .filter((entry) => new Date(entry.createdAt).getTime() < start.getTime())
-      .reduce((sum, entry) => sum + getCashEntrySignedAmount(entry), 0)
-  );
+  let report = getReportBeforePeriod(start);
   let weekNumber = 1;
 
   getMonthWeekPeriods(start).forEach((period) => {
@@ -1402,26 +1603,16 @@ function getTreasuryWeekRows(start, end) {
         new Date(entry.createdAt).getTime() >= weekStart.getTime() &&
         new Date(entry.createdAt).getTime() < weekEnd.getTime()
     );
-    const salesTotal = roundClientAmount(
-      sales.reduce((sum, sale) => sum + Number(sale.subtotal || 0), 0)
+    const salesTotal = getSalesTotal(sales);
+    const expensesTotal = getExpensesTotal(cashEntries);
+    const ordersTotal = getOrdersTotal(cashEntries);
+    const grossProfit = getGrossProfitTotal(sales);
+    const endingBalance = getTreasuryEndingBalance(
+      report,
+      salesTotal,
+      expensesTotal,
+      ordersTotal
     );
-    const expensesTotal = roundClientAmount(
-      cashEntries
-        .filter((entry) => entry.type === "expense")
-        .reduce((sum, entry) => sum + Number(entry.amount || 0), 0)
-    );
-    const ordersTotal = roundClientAmount(
-      cashEntries
-        .filter((entry) => entry.type === "stock_purchase")
-        .reduce((sum, entry) => sum + Number(entry.amount || 0), 0)
-    );
-    const grossMargin = roundClientAmount(
-      sales.reduce((sum, sale) => sum + getSaleMargin(sale), 0)
-    );
-    const cashFlow = roundClientAmount(
-      cashEntries.reduce((sum, entry) => sum + getCashEntrySignedAmount(entry), 0)
-    );
-    const endingBalance = roundClientAmount(report + cashFlow);
 
     rows.push({
       label: `Semaine ${String(weekNumber).padStart(2, "0")}`,
@@ -1430,8 +1621,8 @@ function getTreasuryWeekRows(start, end) {
       salesTotal,
       expensesTotal,
       ordersTotal,
-      grossMargin,
-      netProfit: roundClientAmount(grossMargin - expensesTotal),
+      grossProfit,
+      netProfit: grossProfit,
       endingBalance
     });
     report = endingBalance;
@@ -1472,7 +1663,7 @@ function renderTreasuryStats(totals) {
     {
       label: "Depenses courantes",
       value: formatCurrency(totals.expensesTotal),
-      hint: "Retirees du benefice"
+      hint: "Affichees a part des ventes"
     },
     {
       label: "Commandes",
@@ -1480,9 +1671,9 @@ function renderTreasuryStats(totals) {
       hint: "Affichees a part du benefice"
     },
     {
-      label: "Benefice net",
+      label: "Benefice brute",
       value: formatCurrency(totals.netProfit),
-      hint: "Marge brute moins depenses courantes"
+      hint: "Vente moins cout d'achat, sans devenir negatif"
     },
     {
       label: "Solde fin periode",
@@ -1525,7 +1716,6 @@ function renderTreasuryRows(rows) {
       formatCurrency(row.salesTotal),
       `-${formatCurrency(row.expensesTotal)}`,
       `-${formatCurrency(row.ordersTotal)}`,
-      formatCurrency(row.grossMargin),
       formatCurrency(row.netProfit),
       formatCurrency(row.endingBalance)
     ].forEach((value, index) => {
@@ -1579,7 +1769,7 @@ function renderTreasuryLists(totals) {
       createListItem(
         sale.reference,
         `${sale.items.length} ligne(s) • marge ${formatCurrency(
-          getSaleMargin(sale)
+          getSaleGrossProfit(sale)
         )}`,
         formatCurrency(sale.subtotal)
       ),
@@ -1609,7 +1799,7 @@ function renderTreasuryPage() {
     daysCopy.textContent =
       treasuryState.view === "month"
         ? "Chaque ligne regroupe les mouvements d'une semaine du mois selectionne."
-        : "Le benefice journalier retire seulement les depenses courantes. Les commandes sont affichees a part.";
+        : "Le benefice journalier reste borne a zero. Les commandes sont affichees a part.";
   }
   if (firstColumn) {
     firstColumn.textContent = treasuryState.view === "month" ? "Semaine" : "Jour";

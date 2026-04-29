@@ -191,7 +191,15 @@
                   >
                     &lt;
                   </button>
-                  <strong id="sales-date-label">Aujourd'hui</strong>
+                  <div class="date-picker-wrapper">
+                    <input 
+                      type="date" 
+                      id="sales-date-picker" 
+                      class="date-picker-input"
+                      title="Cliquez pour selectionner une date"
+                    />
+                    <strong id="sales-date-label">Aujourd'hui</strong>
+                  </div>
                   <button
                     type="button"
                     class="icon-button"
@@ -204,6 +212,7 @@
                 </div>
               </div>
             </div>
+            <section class="stats-grid sales-kpi-grid" id="sales-kpi-grid" aria-label="Indicateurs journaliers"></section>
             <div id="sales-list" class="list"></div>
           </section>
         </main>
