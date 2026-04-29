@@ -8,26 +8,7 @@
   </head>
   <body data-page="stock" data-role="admin">
     <div class="app-shell">
-      <aside class="sidebar">
-        <nav class="nav-links">
-          <a class="nav-link" href="/index.html">Tableau de bord</a>
-          <a class="nav-link" href="/produits.html">Produits</a>
-          <a class="nav-link is-active" href="/approvisionnement.html">Approvisionnement</a>
-          <a class="nav-link" href="/services.html">Services</a>
-          <a class="nav-link" href="/ventes.html">Ventes</a>
-          <a class="nav-link" href="/activite.html">Activite</a>
-          <a class="nav-link" href="/tresorerie.html">Trésorerie</a>
-          <a class="nav-link" href="/chat-ia.html">Chat avec IA</a>
-          <button class="nav-link nav-button" type="button" data-action="admin-logout">
-            Deconnexion admin
-          </button>
-        </nav>
-        <div class="brand-block">
-          <p class="eyebrow">Multiservice</p>
-          <h1>GestionComV2</h1>
-          <p class="brand-copy">Stock, prestations et caisse locale.</p>
-        </div>
-      </aside>
+      <div id="sidebar-container"></div>
 
       <div class="content-shell">
         <header class="page-header compact">
@@ -91,6 +72,11 @@
       </article>
     </template>
 
+    <script src="/components.js"></script>
     <script src="/app.js"></script>
+    <script>
+      loadComponent("/components/sidebar.html", "#sidebar-container")
+        .then(() => activateSidebarLink());
+    </script>
   </body>
   </html>

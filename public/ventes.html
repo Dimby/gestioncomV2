@@ -8,21 +8,7 @@
   </head>
   <body data-page="sales" data-role="public">
     <div class="app-shell">
-      <aside class="sidebar">
-        <div class="brand-block">
-          <p class="eyebrow">Espace vendeur</p>
-          <h1>GestionComV2</h1>
-          <p class="brand-copy">Saisie libre des ventes et consultation du journal de caisse.</p>
-        </div>
-        <nav class="nav-links">
-          <a class="nav-link is-active" href="/ventes.html">Ventes</a>
-          <a class="nav-link" href="/admin-login.html" data-auth-role="seller">Connexion admin</a>
-          <a class="nav-link" href="/index.html" data-auth-role="admin" hidden>Tableau de bord admin</a>
-          <button class="nav-link nav-button" type="button" data-action="admin-logout" data-auth-role="admin" hidden>
-            Deconnexion admin
-          </button>
-        </nav>
-      </aside>
+      <div id="sidebar-container"></div>
 
       <div class="content-shell">
         <header class="page-header compact">
@@ -229,6 +215,11 @@
       </article>
     </template>
 
+    <script src="/components.js"></script>
     <script src="/app.js"></script>
+    <script>
+      loadComponent("/components/sidebar.html", "#sidebar-container")
+        .then(() => activateSidebarLink());
+    </script>
   </body>
   </html>
